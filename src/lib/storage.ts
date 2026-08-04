@@ -5,6 +5,7 @@ const CACHE_KEYS = {
   BASE_DATA_TS: 'nutri_base_data_ts',
   DAY_EDIT: (date: string) => `nutri_edit_${date}`,
   SETTINGS: 'nutri_settings',
+  MEAL_COLLAPSE: (date: string) => `nutri_meal_collapse_${date}`,
 };
 
 interface CachedBaseData {
@@ -85,4 +86,19 @@ export function getSettings(): Settings {
 
 export function saveSettings(settings: Settings): void {
   localStorage.setItem(CACHE_KEYS.SETTINGS, JSON.stringify(settings));
+}
+
+export function getMealCollapseState(date: string): Record<string, boolean> {
+  const cached = localStorage.getItem(CACHE_KEYS.MEAL_COLLAPSE(date));
+  if (!cached) return {};
+
+  try {
+    return JSON.parse(cached);
+  } catch {
+    return {};
+  }
+}
+
+export function saveMealCollapseState(date: string, state: Record<string, boolean>): void {
+  localStorage.setItem(CACHE_KEYS.MEAL_COLLAPSE(date), JSON.stringify(state));
 }

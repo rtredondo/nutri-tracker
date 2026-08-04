@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Food, LogEntry } from '../lib/nutrients';
 import { sumNutrients } from '../lib/nutrients';
 import { fetchLogs, saveDay } from '../lib/api';
-import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings } from '../lib/storage';
+import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
 import FoodRow from './FoodRow';
 import NutrientSummary from './NutrientSummary';
@@ -23,6 +23,9 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [showFoodPicker, setShowFoodPicker] = useState<string | null>(null);
+  const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>(() =>
+    getMealCollapseState(getToday())
+  );
   const settings = getSettings();
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       setLoading(true);
       setError(null);
       setSaved(false);
+      setCollapsedMeals(getMealCollapseState(date));
 
       // Check cache first
       const cached = getCachedDayEdits(date);
@@ -166,6 +170,26 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     }
   };
 
+  const handleToggleMeal = (meal: string) => {
+    const updated = { ...collapsedMeals, [meal]: !collapsedMeals[meal] };
+    setCollapsedMeals(updated);
+    saveMealCollapseState(date, updated);
+  };
+
+  const handleCollapseAll = () => {
+    const allCollapsed: Record<string, boolean> = {};
+    MEAL_ORDER.forEach((meal) => {
+      allCollapsed[meal] = true;
+    });
+    setCollapsedMeals(allCollapsed);
+    saveMealCollapseState(date, allCollapsed);
+  };
+
+  const handleExpandAll = () => {
+    setCollapsedMeals({});
+    saveMealCollapseState(date, {});
+  };
+
   const groupedByMeal = MEAL_ORDER.map((meal) => ({
     meal,
     items: entries.filter((e) => e.meal === meal),
@@ -207,41 +231,129 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         </div>
       )}
 
+      {/* Collapse/Expand Controls */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleCollapseAll}
+          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium"
+        >
+          Collapse all
+        </button>
+        <button
+          onClick={handleExpandAll}
+          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium"
+        >
+          Expand all
+        </button>
+      </div>
+
       {/* Meals */}
       <div className="space-y-6">
-        {groupedByMeal.map(({ meal, items }) => (
-          <div key={meal} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 font-semibold text-gray-900 dark:text-white">
-              {meal}
-            </div>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {items.map((entry) => {
-                const origIdx = entries.indexOf(entry);
-                const food = foods.find((f) => f.food_id === entry.food_id);
-                if (!food) return null;
-                return (
-                  <FoodRow
-                    key={origIdx}
-                    entry={entry}
-                    food={food}
-                    onQuantityChange={(newQty) => handleQuantityChange(origIdx, newQty)}
-                    onRemove={() => handleRemoveEntry(origIdx)}
-                    onSwap={(newFood) => handleSwapFood(origIdx, newFood)}
-                    allFoods={foods}
-                  />
-                );
-              })}
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+        {groupedByMeal.map(({ meal, items }) => {
+          const isCollapsed = collapsedMeals[meal];
+          const mealKcal = sumNutrients(items, 'kcal');
+          const mealProtein = sumNutrients(items, 'protein_g');
+          const mealFat = sumNutrients(items, 'fat_g');
+          const mealCarbs = sumNutrients(items, 'carbs_g');
+
+          return (
+            <div key={meal} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              {/* Collapsible Header */}
               <button
-                onClick={() => setShowFoodPicker(meal)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                onClick={() => handleToggleMeal(meal)}
+                className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-left"
               >
-                + Add food
+                <div className="flex items-center justify-between gap-4">
+                  {/* Left: Chevron, Meal name, Item count */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span
+                      className="flex-shrink-0 transition-transform"
+                      style={{
+                        transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                      }}
+                    >
+                      ▼
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white truncate">
+                      {meal}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      {items.length}
+                    </span>
+                  </div>
+
+                  {/* Right: Per-meal totals */}
+                  <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 text-xs md:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <div className="text-right">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {mealKcal.total === null ? '—' : mealKcal.total.toFixed(0)}
+                      </div>
+                      <div className="hidden md:block text-xs">kcal</div>
+                    </div>
+                    <div className="hidden sm:block text-right">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {mealProtein.total === null ? '—' : mealProtein.total.toFixed(0)}
+                      </div>
+                      <div className="hidden md:block text-xs">P</div>
+                    </div>
+                    <div className="hidden md:block text-right">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {mealFat.total === null ? '—' : mealFat.total.toFixed(0)}
+                      </div>
+                      <div className="text-xs">F</div>
+                    </div>
+                    <div className="hidden lg:block text-right">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {mealCarbs.total === null ? '—' : mealCarbs.total.toFixed(0)}
+                      </div>
+                      <div className="text-xs">C</div>
+                    </div>
+                  </div>
+                </div>
               </button>
+
+              {/* Collapsed Content */}
+              {!isCollapsed && (
+                <>
+                  {items.length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-4 gap-2">
+                      <div>Food</div>
+                      <div className="text-right">Qty</div>
+                      <div className="text-right">kcal</div>
+                      <div className="text-right">Protein</div>
+                    </div>
+                  )}
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {items.map((entry) => {
+                      const origIdx = entries.indexOf(entry);
+                      const food = foods.find((f) => f.food_id === entry.food_id);
+                      if (!food) return null;
+                      return (
+                        <FoodRow
+                          key={origIdx}
+                          entry={entry}
+                          food={food}
+                          onQuantityChange={(newQty) => handleQuantityChange(origIdx, newQty)}
+                          onRemove={() => handleRemoveEntry(origIdx)}
+                          onSwap={(newFood) => handleSwapFood(origIdx, newFood)}
+                          allFoods={foods}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setShowFoodPicker(meal)}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    >
+                      + Add food
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       </div>
