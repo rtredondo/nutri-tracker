@@ -5,7 +5,6 @@ import { sumNutrients } from '../lib/nutrients';
 import { fetchLogs } from '../lib/api';
 import { getToday, addDays, getWeekDates, getDayName, getWeekBoundaries } from '../lib/dates';
 import { getSettings } from '../lib/storage';
-import { exportToCSV } from '../lib/export';
 
 interface DayData {
   date: string;
@@ -20,7 +19,6 @@ interface DayData {
 export default function WeekView() {
   const [weekDate, setWeekDate] = useState(getToday());
   const [days, setDays] = useState<DayData[]>([]);
-  const [entries, setEntries] = useState<LogEntry[]>([]);
   const settings = getSettings();
 
   useEffect(() => {
@@ -30,11 +28,9 @@ export default function WeekView() {
 
       const result = await fetchLogs(monday, sunday);
       const logsMap = new Map<string, LogEntry[]>();
-      const allEntries: LogEntry[] = [];
 
       if ('ok' in result && result.ok) {
         result.entries.forEach((entry) => {
-          allEntries.push(entry);
           if (!logsMap.has(entry.meal)) {
             logsMap.set(entry.meal, []);
           }
@@ -62,7 +58,6 @@ export default function WeekView() {
       });
 
       setDays(dayData);
-      setEntries(allEntries);
     };
 
     loadWeek();
@@ -74,13 +69,6 @@ export default function WeekView() {
 
   const handleNextWeek = () => {
     setWeekDate(addDays(weekDate, 7));
-  };
-
-  const handleExport = () => {
-    // Entries are already sorted by date from fetchLogs
-    const { monday } = getWeekBoundaries(weekDate);
-    const filename = `nutri-week-${monday}.csv`;
-    exportToCSV(entries, filename);
   };
 
   const { monday, sunday } = getWeekBoundaries(weekDate);
@@ -115,16 +103,6 @@ export default function WeekView() {
           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
         >
           Next Week →
-        </button>
-      </div>
-
-      {/* Export Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleExport}
-          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-        >
-          Export Week
         </button>
       </div>
 
