@@ -31,7 +31,7 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```
-VITE_API_URL=https://script.google.com/macros/d/{SCRIPT_ID}/usercopy/exec
+VITE_API_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
 VITE_API_TOKEN=your_shared_secret_token_here
 ```
 
