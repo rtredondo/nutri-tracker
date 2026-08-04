@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Food, LogEntry } from '../lib/nutrients';
 import { sumNutrients } from '../lib/nutrients';
 import { fetchLogs, saveDay } from '../lib/api';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
+import { debounce } from '../lib/debounce';
 import FoodRow from './FoodRow';
 import NutrientSummary from './NutrientSummary';
 import FoodPicker from './FoodPicker';
@@ -18,21 +19,22 @@ const MEAL_ORDER = ['1. Breakfast', '2. Almoço', '3. Lanche Tarde', '4. Jantar'
 export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const [date, setDate] = useState(getToday());
   const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [showFoodPicker, setShowFoodPicker] = useState<string | null>(null);
   const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>(() =>
     getMealCollapseState(getToday())
   );
+  const [autoSaveLoading, setAutoSaveLoading] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
+  const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const settings = getSettings();
+  const autoSaveRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadDay = async () => {
-      setLoading(true);
       setError(null);
-      setSaved(false);
       setCollapsedMeals(getMealCollapseState(date));
 
       // Check cache first
@@ -40,7 +42,6 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       if (cached) {
         setEntries(cached);
         setHasUnsaved(true);
-        setLoading(false);
         return;
       }
 
@@ -49,17 +50,85 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
 
       if ('ok' in result && result.ok && result.entries.length > 0) {
         setEntries(result.entries);
-        setSaved(true);
       } else {
         // Use default cardapio
         setEntries(cardapio.filter((e) => e.meal)); // Ensure valid entries
       }
 
-      setLoading(false);
     };
 
     loadDay();
   }, [date, cardapio]);
+
+  const performAutoSave = async (entriesToSave: LogEntry[]) => {
+    if (!hasUnsaved && autoSaveLoading === false) return;
+
+    setAutoSaveLoading(true);
+    setAutoSaveError(null);
+
+    const result = await saveDay(date, entriesToSave);
+
+    if ('ok' in result && result.ok) {
+      clearDayEdits(date);
+      setHasUnsaved(false);
+      setLastSavedTime(Date.now());
+      setAutoSaveLoading(false);
+      setRetryCount(0);
+      if (autoSaveRetryRef.current) {
+        clearTimeout(autoSaveRetryRef.current);
+        autoSaveRetryRef.current = null;
+      }
+    } else {
+      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
+      setAutoSaveError(errorMsg);
+      setAutoSaveLoading(false);
+
+      if (retryCount < 3) {
+        setRetryCount((prev) => prev + 1);
+        autoSaveRetryRef.current = setTimeout(() => {
+          performAutoSave(entriesToSave);
+        }, 5000);
+      }
+    }
+  };
+
+  const debouncedAutoSave = useRef(debounce(performAutoSave, 2000)).current;
+
+  // Save on date change, visibility change, and page unload
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && hasUnsaved) {
+        debouncedAutoSave.flush();
+      }
+    };
+
+    const handlePageHide = () => {
+      if (hasUnsaved) {
+        navigator.sendBeacon('/api/sheet', JSON.stringify({
+          action: 'log',
+          date,
+          entries,
+        }));
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [hasUnsaved, date, entries, debouncedAutoSave]);
+
+  // Flush autosave on date change to save previous day
+  const prevDateRef = useRef(date);
+  useEffect(() => {
+    if (prevDateRef.current !== date && hasUnsaved) {
+      debouncedAutoSave.flush();
+    }
+    prevDateRef.current = date;
+  }, [date, hasUnsaved, debouncedAutoSave]);
 
   const handleQuantityChange = (index: number, newQty: number) => {
     const updated = [...entries];
@@ -77,7 +146,8 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setSaved(false);
+    setAutoSaveError(null);
+    debouncedAutoSave(updated);
   };
 
   const handleRemoveEntry = (index: number) => {
@@ -85,7 +155,8 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setSaved(false);
+    setAutoSaveError(null);
+    debouncedAutoSave(updated);
   };
 
   const handleAddFood = (selectedFood: Food, meal: string) => {
@@ -109,8 +180,9 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setSaved(false);
     setShowFoodPicker(null);
+    setAutoSaveError(null);
+    debouncedAutoSave(updated);
   };
 
   const handleSwapFood = (index: number, newFood: Food) => {
@@ -140,23 +212,27 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setSaved(false);
+    setAutoSaveError(null);
+    debouncedAutoSave(updated);
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    setError(null);
+    debouncedAutoSave.cancel();
+    setAutoSaveLoading(true);
+    setAutoSaveError(null);
 
     const result = await saveDay(date, entries);
 
     if ('ok' in result && result.ok) {
-      setSaved(true);
       setHasUnsaved(false);
       clearDayEdits(date);
-      setLoading(false);
-    } else if (!('ok' in result) || !result.ok) {
-      setError(('message' in result && typeof result.message === 'string' ? result.message : 'Unknown error') || null);
-      setLoading(false);
+      setLastSavedTime(Date.now());
+      setAutoSaveLoading(false);
+      setRetryCount(0);
+    } else {
+      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
+      setAutoSaveError(errorMsg);
+      setAutoSaveLoading(false);
     }
   };
 
@@ -166,7 +242,6 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       setEntries(defaultEntries);
       clearDayEdits(date);
       setHasUnsaved(true);
-      setSaved(false);
     }
   };
 
@@ -417,6 +492,30 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
             </div>
           </div>
 
+          {/* Status Line */}
+          <div className="text-center text-sm mb-4">
+            {autoSaveLoading && <span className="text-gray-600 dark:text-gray-400">Saving…</span>}
+            {!autoSaveLoading && autoSaveError && retryCount >= 3 && (
+              <button
+                onClick={handleSave}
+                className="text-red-600 dark:text-red-400 hover:underline font-medium"
+              >
+                Save failed — tap to retry
+              </button>
+            )}
+            {!autoSaveLoading && autoSaveError && retryCount < 3 && (
+              <span className="text-red-600 dark:text-red-400">Save failed — retrying…</span>
+            )}
+            {!autoSaveLoading && !autoSaveError && lastSavedTime && !hasUnsaved && (
+              <span className="text-gray-600 dark:text-gray-400">
+                Saved {new Date(lastSavedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {!autoSaveLoading && !autoSaveError && hasUnsaved && (
+              <span className="text-gray-600 dark:text-gray-400">Unsaved changes</span>
+            )}
+          </div>
+
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
             <button
@@ -427,14 +526,14 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
             </button>
             <button
               onClick={handleSave}
-              disabled={!hasUnsaved || loading}
+              disabled={!hasUnsaved || autoSaveLoading}
               className={`px-6 py-2 rounded-lg font-medium transition ${
-                hasUnsaved && !loading
+                hasUnsaved && !autoSaveLoading
                   ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               }`}
             >
-              {loading ? 'Saving...' : saved ? '✓ Saved' : 'Save Day'}
+              Sync now
             </button>
           </div>
         </div>
