@@ -265,48 +265,48 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               >
                 <div className="flex items-center justify-between gap-4">
                   {/* Left: Chevron, Meal name, Item count */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                     <span
-                      className="flex-shrink-0 transition-transform"
+                      className="flex-shrink-0 transition-transform text-sm"
                       style={{
                         transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
                       }}
                     >
                       ▼
                     </span>
-                    <span className="font-semibold text-gray-900 dark:text-white truncate">
+                    <span className="font-semibold text-sm md:text-base text-gray-900 dark:text-white truncate">
                       {meal}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                    <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
                       {items.length}
                     </span>
                   </div>
 
-                  {/* Right: Per-meal totals */}
-                  <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 text-xs md:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {/* Right: Per-meal totals (visible at all widths) */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     <div className="text-right">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {mealKcal.total === null ? '—' : mealKcal.total.toFixed(0)}
                       </div>
-                      <div className="hidden md:block text-xs">kcal</div>
+                      <div className="text-xs hidden sm:block">kcal</div>
                     </div>
-                    <div className="hidden sm:block text-right">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {mealProtein.total === null ? '—' : mealProtein.total.toFixed(0)}
                       </div>
-                      <div className="hidden md:block text-xs">P</div>
+                      <div className="text-xs hidden sm:block">P</div>
                     </div>
-                    <div className="hidden md:block text-right">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {mealFat.total === null ? '—' : mealFat.total.toFixed(0)}
                       </div>
-                      <div className="text-xs">F</div>
+                      <div className="text-xs hidden sm:block">F</div>
                     </div>
-                    <div className="hidden lg:block text-right">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {mealCarbs.total === null ? '—' : mealCarbs.total.toFixed(0)}
                       </div>
-                      <div className="text-xs">C</div>
+                      <div className="text-xs hidden sm:block">C</div>
                     </div>
                   </div>
                 </div>
