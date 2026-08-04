@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchBaseData } from './lib/api';
-import { cacheBaseData, getCachedBaseData, isCacheStale } from './lib/storage';
+import { cacheBaseData, getCachedBaseData } from './lib/storage';
 import type { Food, LogEntry } from './lib/nutrients';
 import TodayView from './components/TodayView';
 import WeekView from './components/WeekView';
@@ -26,28 +26,29 @@ export default function App() {
     cacheStale: false,
   });
 
-  const loadBaseData = useCallback(async (forceRefresh = false) => {
-    setAppState((prev) => ({ ...prev, loading: true, error: null }));
+  const loadBaseData = useCallback(async () => {
+    const cached = getCachedBaseData();
+    const hasCache = !!cached;
 
-    // Try to use cache first if not forcing refresh
-    if (!forceRefresh) {
-      const cached = getCachedBaseData();
-      if (cached && !isCacheStale()) {
-        setAppState({
-          foods: cached.foods,
-          cardapio: cached.cardapio,
-          loading: false,
-          error: null,
-          cacheStale: false,
-        });
-        return;
-      }
+    // Show cached data immediately if available, with loading state
+    if (hasCache) {
+      setAppState({
+        foods: cached!.foods,
+        cardapio: cached!.cardapio,
+        loading: true,
+        error: null,
+        cacheStale: false,
+      });
+    } else {
+      // No cache: show full-screen spinner
+      setAppState((prev) => ({ ...prev, loading: true, error: null }));
     }
 
-    // Fetch from API
+    // Always fetch from API in parallel
     const result = await fetchBaseData();
 
     if ('ok' in result && result.ok) {
+      // Update with fresh data
       cacheBaseData(result.foods, result.cardapio);
       setAppState({
         foods: result.foods,
@@ -58,17 +59,25 @@ export default function App() {
       });
     } else if (!('ok' in result) || !result.ok) {
       const errorMsg = 'message' in result ? result.message : 'Unknown error';
-      // Try fallback to cache
-      const cached = getCachedBaseData();
-      if (cached) {
+      // Fetch failed: keep showing cached data if available
+      if (hasCache) {
+        const cacheAge = Date.now() - cached!.timestamp;
+        const ageHours = Math.round(cacheAge / (1000 * 60 * 60) * 10) / 10;
+        const ageStr =
+          cacheAge < 60000
+            ? 'just now'
+            : cacheAge < 3600000
+              ? `${Math.round(cacheAge / 60000)} minutes ago`
+              : `${ageHours} hours ago`;
         setAppState({
-          foods: cached.foods,
-          cardapio: cached.cardapio,
+          foods: cached!.foods,
+          cardapio: cached!.cardapio,
           loading: false,
-          error: `API error (${errorMsg}). Using cached data.`,
+          error: `Offline — showing data from ${ageStr}`,
           cacheStale: true,
         });
       } else {
+        // No cache and API failed: show error
         setAppState({
           foods: null,
           cardapio: null,
@@ -85,7 +94,7 @@ export default function App() {
   }, [loadBaseData]);
 
   const handleRefresh = useCallback(() => {
-    loadBaseData(true);
+    loadBaseData();
   }, [loadBaseData]);
 
   if (appState.loading) {
