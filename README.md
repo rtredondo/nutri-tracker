@@ -243,7 +243,7 @@ Vercel auto-deploys on push to main. Your app is live at `https://nutri-tracker.
 
 - **React 19** with TypeScript
 - **Vite** for build and dev server
-- **Tailwind CSS** for styling
+- **Tailwind CSS v4** for styling (uses `@import "tailwindcss"` and @tailwindcss/postcss)
 - **Recharts** for charts
 - **Vitest** for testing
 - **localStorage** for caching (no backend database)
@@ -253,6 +253,7 @@ Vercel auto-deploys on push to main. Your app is live at `https://nutri-tracker.
 - The app never edits the food database—food data is read-only and sourced from the spreadsheet
 - Daily edits are cached in localStorage and synced to the spreadsheet on save
 - The API token is required but not used for auth; it's a simple shared secret for script-to-app validation
+- Base data is fetched on every app load (network-first strategy); cached data shows immediately if network is slow or offline
 - Mobile experience is optimized: quantity inputs use `inputMode="decimal"` and tap targets are comfortable
 - Dark mode is supported via Tailwind's `dark:` classes
 
