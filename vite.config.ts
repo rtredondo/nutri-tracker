@@ -7,21 +7,34 @@ export default defineConfig(({ mode }) => {
   const appsScriptUrl = env.APPS_SCRIPT_URL
   const appsScriptToken = env.APPS_SCRIPT_TOKEN
 
+  // Parse Apps Script URL to extract origin and pathname
+  let scriptOrigin = 'https://script.google.com'
+  let scriptPathname = '/macros/s/DUMMY/exec'
+
+  if (appsScriptUrl) {
+    try {
+      const url = new URL(appsScriptUrl)
+      scriptOrigin = url.origin
+      scriptPathname = url.pathname
+    } catch (e) {
+      console.warn('Invalid APPS_SCRIPT_URL:', e)
+    }
+  }
+
   return {
     plugins: [react()],
     server: {
       middlewareMode: false,
       proxy: {
         '/api/sheet': {
-          target: appsScriptUrl || 'https://script.google.com/macros/s/DUMMY/exec',
+          target: scriptOrigin,
           changeOrigin: true,
-          rewrite: () => '',
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq, req) => {
-              // Add token to query string
-              const originalUrl = req.url || ''
-              const separator = originalUrl.includes('?') ? '&' : '?'
-              proxyReq.path = `${originalUrl}${separator}token=${encodeURIComponent(appsScriptToken || '')}`
+              // Build path: Apps Script pathname + original query string + token
+              const queryString = req.url?.split('?')[1] || ''
+              const separator = queryString ? '&' : '?'
+              proxyReq.path = `${scriptPathname}${queryString ? `?${queryString}` : ''}${separator}token=${encodeURIComponent(appsScriptToken || '')}`
 
               // Ensure POST requests use text/plain content type
               if (req.method === 'POST') {
