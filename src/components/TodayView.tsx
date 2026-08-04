@@ -79,8 +79,9 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         autoSaveRetryRef.current = null;
       }
       if (pendingSaveRef.current) {
-        pendingSaveRef.current = false;
-        performAutoSaveRef.current(entriesRef.current, dateToSave);
+        const pending = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        performAutoSaveRef.current(pending.entries, pending.date);
       }
     } else {
       const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
@@ -101,11 +102,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     performAutoSaveRef.current = performAutoSave;
   }, [performAutoSave]);
 
-  const pendingSaveRef = useRef(false);
-  const entriesRef = useRef(entries);
-  useEffect(() => {
-    entriesRef.current = entries;
-  }, [entries]);
+  const pendingSaveRef = useRef<{ entries: LogEntry[]; date: string } | null>(null);
 
   const debouncedAutoSave = useRef(debounce(async (entriesToSave: LogEntry[], dateToSave: string) => {
     await performAutoSaveRef.current(entriesToSave, dateToSave);
@@ -165,7 +162,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setHasUnsaved(true);
     setAutoSaveError(null);
     if (autoSaveLoading) {
-      pendingSaveRef.current = true;
+      pendingSaveRef.current = { entries: updated, date };
     } else {
       debouncedAutoSave(updated, date);
     }
@@ -178,7 +175,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setHasUnsaved(true);
     setAutoSaveError(null);
     if (autoSaveLoading) {
-      pendingSaveRef.current = true;
+      pendingSaveRef.current = { entries: updated, date };
     } else {
       debouncedAutoSave(updated, date);
     }
@@ -208,7 +205,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setShowFoodPicker(null);
     setAutoSaveError(null);
     if (autoSaveLoading) {
-      pendingSaveRef.current = true;
+      pendingSaveRef.current = { entries: updated, date };
     } else {
       debouncedAutoSave(updated, date);
     }
@@ -243,7 +240,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setHasUnsaved(true);
     setAutoSaveError(null);
     if (autoSaveLoading) {
-      pendingSaveRef.current = true;
+      pendingSaveRef.current = { entries: updated, date };
     } else {
       debouncedAutoSave(updated, date);
     }
