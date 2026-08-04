@@ -33,7 +33,28 @@ export default async function handler(
       const url = new URL(appsScriptUrl);
       url.searchParams.append('token', appsScriptToken);
 
-      const body = JSON.stringify(req.body);
+      let body: string;
+      if (typeof req.body === 'string') {
+        // Body is already a string (raw request)
+        body = req.body;
+        console.log(`[POST] body is string, length: ${body.length}`);
+      } else if (req.body && typeof req.body === 'object') {
+        // Body is an object (pre-parsed by Vercel)
+        body = JSON.stringify(req.body);
+        console.log(`[POST] body is object, stringified length: ${body.length}`);
+      } else {
+        // Body is undefined or other — read raw stream
+        console.log(`[POST] body is undefined/other (${typeof req.body}), reading raw stream`);
+        const chunks: Buffer[] = [];
+        await new Promise<void>((resolve, reject) => {
+          req.on('data', (chunk: Buffer) => chunks.push(chunk));
+          req.on('end', () => resolve());
+          req.on('error', reject);
+        });
+        body = Buffer.concat(chunks).toString('utf-8');
+        console.log(`[POST] raw stream read, length: ${body.length}`);
+      }
+
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
