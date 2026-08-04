@@ -1,5 +1,6 @@
 import type { LogEntry } from './nutrients';
 
+// UTF-8 BOM: U+FEFF becomes EF BB BF in UTF-8 encoding
 const CSV_BOM = '﻿';
 
 function escapeCSVField(value: string | number | null | undefined): string {

@@ -60,16 +60,16 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     loadDay();
   }, [date, cardapio]);
 
-  const performAutoSave = async (entriesToSave: LogEntry[]) => {
+  const performAutoSave = async (entriesToSave: LogEntry[], dateToSave: string) => {
     if (!hasUnsaved && autoSaveLoading === false) return;
 
     setAutoSaveLoading(true);
     setAutoSaveError(null);
 
-    const result = await saveDay(date, entriesToSave);
+    const result = await saveDay(dateToSave, entriesToSave);
 
     if ('ok' in result && result.ok) {
-      clearDayEdits(date);
+      clearDayEdits(dateToSave);
       setHasUnsaved(false);
       setLastSavedTime(Date.now());
       setAutoSaveLoading(false);
@@ -77,6 +77,10 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       if (autoSaveRetryRef.current) {
         clearTimeout(autoSaveRetryRef.current);
         autoSaveRetryRef.current = null;
+      }
+      if (pendingSaveRef.current) {
+        pendingSaveRef.current = false;
+        performAutoSaveRef.current(entriesRef.current, dateToSave);
       }
     } else {
       const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
@@ -86,15 +90,28 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       if (retryCount < 3) {
         setRetryCount((prev) => prev + 1);
         autoSaveRetryRef.current = setTimeout(() => {
-          performAutoSave(entriesToSave);
+          performAutoSave(entriesToSave, dateToSave);
         }, 5000);
       }
     }
   };
 
-  const debouncedAutoSave = useRef(debounce(performAutoSave, 2000)).current;
+  const performAutoSaveRef = useRef(performAutoSave);
+  useEffect(() => {
+    performAutoSaveRef.current = performAutoSave;
+  }, [performAutoSave]);
 
-  // Save on date change, visibility change, and page unload
+  const pendingSaveRef = useRef(false);
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
+  const debouncedAutoSave = useRef(debounce(async (entriesToSave: LogEntry[], dateToSave: string) => {
+    await performAutoSaveRef.current(entriesToSave, dateToSave);
+  }, 2000)).current;
+
+  // Save on visibility change and page unload
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && hasUnsaved) {
@@ -105,7 +122,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     const handlePageHide = () => {
       if (hasUnsaved) {
         navigator.sendBeacon('/api/sheet', JSON.stringify({
-          action: 'log',
+          action: 'saveDay',
           date,
           entries,
         }));
@@ -125,10 +142,10 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const prevDateRef = useRef(date);
   useEffect(() => {
     if (prevDateRef.current !== date && hasUnsaved) {
-      debouncedAutoSave.flush();
+      performAutoSaveRef.current(entries, prevDateRef.current);
     }
     prevDateRef.current = date;
-  }, [date, hasUnsaved, debouncedAutoSave]);
+  }, [date, hasUnsaved, entries]);
 
   const handleQuantityChange = (index: number, newQty: number) => {
     const updated = [...entries];
@@ -147,7 +164,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
     setAutoSaveError(null);
-    debouncedAutoSave(updated);
+    if (autoSaveLoading) {
+      pendingSaveRef.current = true;
+    } else {
+      debouncedAutoSave(updated, date);
+    }
   };
 
   const handleRemoveEntry = (index: number) => {
@@ -156,7 +177,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
     setAutoSaveError(null);
-    debouncedAutoSave(updated);
+    if (autoSaveLoading) {
+      pendingSaveRef.current = true;
+    } else {
+      debouncedAutoSave(updated, date);
+    }
   };
 
   const handleAddFood = (selectedFood: Food, meal: string) => {
@@ -182,7 +207,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setHasUnsaved(true);
     setShowFoodPicker(null);
     setAutoSaveError(null);
-    debouncedAutoSave(updated);
+    if (autoSaveLoading) {
+      pendingSaveRef.current = true;
+    } else {
+      debouncedAutoSave(updated, date);
+    }
   };
 
   const handleSwapFood = (index: number, newFood: Food) => {
@@ -213,7 +242,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
     setAutoSaveError(null);
-    debouncedAutoSave(updated);
+    if (autoSaveLoading) {
+      pendingSaveRef.current = true;
+    } else {
+      debouncedAutoSave(updated, date);
+    }
   };
 
   const handleSave = async () => {
