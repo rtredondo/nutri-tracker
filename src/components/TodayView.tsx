@@ -4,7 +4,6 @@ import { sumNutrients } from '../lib/nutrients';
 import { fetchLogs, saveDay } from '../lib/api';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
-import { debounce } from '../lib/debounce';
 import FoodRow from './FoodRow';
 import FoodPicker from './FoodPicker';
 
@@ -24,12 +23,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const [collapsedMeals, setCollapsedMeals] = useState<Record<string, boolean>>(() =>
     getMealCollapseState(getToday())
   );
-  const [autoSaveLoading, setAutoSaveLoading] = useState(false);
-  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
-  const [lastSavedTime, setLastSavedTime] = useState<number | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSucessMessage, setSaveSuccessMessage] = useState(false);
+  const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settings = getSettings();
-  const autoSaveRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadDay = async () => {
@@ -59,86 +57,15 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     loadDay();
   }, [date, cardapio]);
 
-  const performAutoSave = async (entriesToSave: LogEntry[], dateToSave: string) => {
-    if (!hasUnsaved && autoSaveLoading === false) return;
-
-    setAutoSaveLoading(true);
-    setAutoSaveError(null);
-
-    const result = await saveDay(dateToSave, entriesToSave);
-
-    if ('ok' in result && result.ok) {
-      clearDayEdits(dateToSave);
-      setHasUnsaved(false);
-      setLastSavedTime(Date.now());
-      setAutoSaveLoading(false);
-      setRetryCount(0);
-      if (autoSaveRetryRef.current) {
-        clearTimeout(autoSaveRetryRef.current);
-        autoSaveRetryRef.current = null;
-      }
-      if (pendingSaveRef.current) {
-        const pending = pendingSaveRef.current;
-        pendingSaveRef.current = null;
-        performAutoSaveRef.current(pending.entries, pending.date);
-      }
-    } else {
-      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
-      setAutoSaveError(errorMsg);
-      setAutoSaveLoading(false);
-
-      if (retryCount < 3) {
-        setRetryCount((prev) => prev + 1);
-        autoSaveRetryRef.current = setTimeout(() => {
-          performAutoSave(entriesToSave, dateToSave);
-        }, 5000);
-      }
-    }
-  };
-
-  const performAutoSaveRef = useRef(performAutoSave);
-  useEffect(() => {
-    performAutoSaveRef.current = performAutoSave;
-  }, [performAutoSave]);
-
-  const pendingSaveRef = useRef<{ entries: LogEntry[]; date: string } | null>(null);
-
-  const debouncedAutoSave = useRef(debounce(async (entriesToSave: LogEntry[], dateToSave: string) => {
-    await performAutoSaveRef.current(entriesToSave, dateToSave);
-  }, 2000)).current;
-
-  // Save on visibility change and page unload
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && hasUnsaved) {
-        debouncedAutoSave.flush();
-      }
-    };
-
-    const handlePageHide = () => {
-      if (hasUnsaved) {
-        navigator.sendBeacon('/api/sheet', JSON.stringify({
-          action: 'saveDay',
-          date,
-          entries,
-        }));
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', handlePageHide);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
-    };
-  }, [hasUnsaved, date, entries, debouncedAutoSave]);
-
-  // Flush autosave on date change to save previous day
+  // Save current day when navigating to another date
   const prevDateRef = useRef(date);
   useEffect(() => {
     if (prevDateRef.current !== date && hasUnsaved) {
-      performAutoSaveRef.current(entries, prevDateRef.current);
+      saveDay(prevDateRef.current, entries).then((result) => {
+        if ('ok' in result && result.ok) {
+          clearDayEdits(prevDateRef.current);
+        }
+      });
     }
     prevDateRef.current = date;
   }, [date, hasUnsaved, entries]);
@@ -159,12 +86,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setAutoSaveError(null);
-    if (autoSaveLoading) {
-      pendingSaveRef.current = { entries: updated, date };
-    } else {
-      debouncedAutoSave(updated, date);
-    }
+    setSaveError(null);
   };
 
   const handleRemoveEntry = (index: number) => {
@@ -172,12 +94,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setAutoSaveError(null);
-    if (autoSaveLoading) {
-      pendingSaveRef.current = { entries: updated, date };
-    } else {
-      debouncedAutoSave(updated, date);
-    }
+    setSaveError(null);
   };
 
   const handleAddFood = (selectedFood: Food, meal: string) => {
@@ -202,12 +119,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
     setShowFoodPicker(null);
-    setAutoSaveError(null);
-    if (autoSaveLoading) {
-      pendingSaveRef.current = { entries: updated, date };
-    } else {
-      debouncedAutoSave(updated, date);
-    }
+    setSaveError(null);
   };
 
   const handleSwapFood = (index: number, newFood: Food) => {
@@ -237,31 +149,28 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
-    setAutoSaveError(null);
-    if (autoSaveLoading) {
-      pendingSaveRef.current = { entries: updated, date };
-    } else {
-      debouncedAutoSave(updated, date);
-    }
+    setSaveError(null);
   };
 
   const handleSave = async () => {
-    debouncedAutoSave.cancel();
-    setAutoSaveLoading(true);
-    setAutoSaveError(null);
+    setSaveLoading(true);
+    setSaveError(null);
 
     const result = await saveDay(date, entries);
 
     if ('ok' in result && result.ok) {
       setHasUnsaved(false);
       clearDayEdits(date);
-      setLastSavedTime(Date.now());
-      setAutoSaveLoading(false);
-      setRetryCount(0);
+      setSaveLoading(false);
+      setSaveSuccessMessage(true);
+      if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current);
+      saveSuccessTimerRef.current = setTimeout(() => {
+        setSaveSuccessMessage(false);
+      }, 2000);
     } else {
       const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Save failed';
-      setAutoSaveError(errorMsg);
-      setAutoSaveLoading(false);
+      setSaveError(errorMsg);
+      setSaveLoading(false);
     }
   };
 
@@ -273,6 +182,19 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       setHasUnsaved(true);
     }
   };
+
+  // Warn before unload if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsaved) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsaved]);
 
   const handleToggleMeal = (meal: string) => {
     const updated = { ...collapsedMeals, [meal]: !collapsedMeals[meal] };
@@ -328,6 +250,32 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
           Next →
         </button>
       </div>
+
+      {/* Prominent Save Button */}
+      <button
+        onClick={handleSave}
+        disabled={!hasUnsaved || saveLoading}
+        className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+          saveError
+            ? 'bg-red-600 text-white hover:bg-red-700'
+            : saveSucessMessage
+              ? 'bg-green-600 text-white'
+              : hasUnsaved && !saveLoading
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {saveLoading && (
+          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {saveLoading && 'Saving…'}
+        {!saveLoading && saveSucessMessage && '✓ Saved'}
+        {!saveLoading && saveError && 'Save failed — tap to retry'}
+        {!saveLoading && !saveError && !saveSucessMessage && (hasUnsaved ? 'Save' : 'Saved')}
+      </button>
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">
@@ -519,25 +467,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
           <div className="flex items-center justify-between gap-2 text-xs">
             {/* Status line */}
             <div className="text-gray-600 dark:text-gray-400 flex-1 min-w-0 truncate">
-              {autoSaveLoading && <span>Saving…</span>}
-              {!autoSaveLoading && autoSaveError && retryCount >= 3 && (
-                <button
-                  onClick={handleSave}
-                  className="text-red-600 dark:text-red-400 hover:underline font-medium whitespace-nowrap"
-                >
-                  Save failed
-                </button>
+              {saveError && (
+                <span className="text-red-600 dark:text-red-400 font-medium">{saveError}</span>
               )}
-              {!autoSaveLoading && autoSaveError && retryCount < 3 && (
-                <span className="text-red-600 dark:text-red-400">Retrying…</span>
-              )}
-              {!autoSaveLoading && !autoSaveError && lastSavedTime && !hasUnsaved && (
-                <span>
-                  Saved {new Date(lastSavedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-              {!autoSaveLoading && !autoSaveError && hasUnsaved && (
-                <span>Unsaved</span>
+              {!saveError && saveSucessMessage && (
+                <span className="text-green-600 dark:text-green-400">✓ Saved</span>
               )}
             </div>
 
@@ -548,17 +482,6 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
                 className="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap"
               >
                 Reset
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!hasUnsaved || autoSaveLoading}
-                className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded font-medium transition whitespace-nowrap ${
-                  hasUnsaved && !autoSaveLoading
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Sync
               </button>
             </div>
           </div>
