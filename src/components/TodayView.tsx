@@ -109,6 +109,36 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setShowFoodPicker(null);
   };
 
+  const handleSwapFood = (index: number, newFood: Food) => {
+    const updated = [...entries];
+    updated[index] = {
+      ...updated[index],
+      food_id: newFood.food_id,
+      food_name: newFood.food_name,
+      unit: newFood.basis_unit,
+      kcal: newFood.kcal,
+      protein_g: newFood.protein_g,
+      fat_g: newFood.fat_g,
+      sat_fat_g: newFood.sat_fat_g,
+      carbs_g: newFood.carbs_g,
+      sugars_g: newFood.sugars_g,
+      fibre_g: newFood.fibre_g,
+      salt_g: newFood.salt_g,
+    };
+
+    // Recompute nutrients with new food but keep quantity
+    const qty = updated[index].qty;
+    for (const nutrient of ['kcal', 'protein_g', 'fat_g', 'sat_fat_g', 'carbs_g', 'sugars_g', 'fibre_g', 'salt_g'] as const) {
+      const value = newFood[nutrient];
+      updated[index][nutrient] = value === null ? null : (value * qty) / newFood.basis_qty;
+    }
+
+    setEntries(updated);
+    cacheDayEdits(date, updated);
+    setHasUnsaved(true);
+    setSaved(false);
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setError(null);
@@ -187,12 +217,17 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {items.map((entry) => {
                 const origIdx = entries.indexOf(entry);
+                const food = foods.find((f) => f.food_id === entry.food_id);
+                if (!food) return null;
                 return (
                   <FoodRow
                     key={origIdx}
                     entry={entry}
+                    food={food}
                     onQuantityChange={(newQty) => handleQuantityChange(origIdx, newQty)}
                     onRemove={() => handleRemoveEntry(origIdx)}
+                    onSwap={(newFood) => handleSwapFood(origIdx, newFood)}
+                    allFoods={foods}
                   />
                 );
               })}
