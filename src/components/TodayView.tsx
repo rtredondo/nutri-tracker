@@ -5,6 +5,7 @@ import { fetchLogs, saveDay } from '../lib/api';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
 import { debounce } from '../lib/debounce';
+import { exportToCSV } from '../lib/export';
 import FoodRow from './FoodRow';
 import NutrientSummary from './NutrientSummary';
 import FoodPicker from './FoodPicker';
@@ -243,6 +244,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       clearDayEdits(date);
       setHasUnsaved(true);
     }
+  };
+
+  const handleExport = () => {
+    const filename = `nutri-${date}.csv`;
+    exportToCSV(entries, filename, date);
   };
 
   const handleToggleMeal = (meal: string) => {
@@ -523,6 +529,12 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Reset to default
+            </button>
+            <button
+              onClick={handleExport}
+              className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Export
             </button>
             <button
               onClick={handleSave}
