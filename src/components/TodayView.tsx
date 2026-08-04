@@ -121,7 +121,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       clearDayEdits(date);
       setLoading(false);
     } else if (!('ok' in result) || !result.ok) {
-      setError(('message' in result ? result.message : 'Unknown error'));
+      setError(('message' in result && typeof result.message === 'string' ? result.message : 'Unknown error') || null);
       setLoading(false);
     }
   };

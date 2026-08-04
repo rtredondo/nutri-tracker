@@ -58,7 +58,7 @@ export default function App() {
         cacheStale: false,
       });
     } else if (!('ok' in result) || !result.ok) {
-      const errorMsg = 'message' in result ? result.message : 'Unknown error';
+      const errorMsg = ('message' in result && typeof result.message === 'string' ? result.message : undefined) || 'Unknown error';
       // Fetch failed: keep showing cached data if available
       if (hasCache) {
         const cacheAge = Date.now() - cached!.timestamp;

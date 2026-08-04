@@ -1,11 +1,6 @@
 import type { Food, LogEntry } from './nutrients';
 
-const API_URL = import.meta.env.VITE_API_URL;
-const API_TOKEN = import.meta.env.VITE_API_TOKEN;
-
-if (!API_URL || !API_TOKEN) {
-  throw new Error('Missing VITE_API_URL or VITE_API_TOKEN environment variables');
-}
+const API_BASE = '/api/sheet';
 
 export interface BaseData {
   ok: boolean;
@@ -25,21 +20,36 @@ export interface SaveResponse {
 }
 
 export interface ApiError {
-  message: string;
+  error?: string;
+  message?: string;
   ok: false;
+}
+
+async function parseJsonResponse(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type');
+  if (!contentType?.includes('application/json')) {
+    throw new Error(`Expected JSON response, got ${contentType || 'unknown'}`);
+  }
+  return response.json();
 }
 
 export async function fetchBaseData(): Promise<BaseData | ApiError> {
   try {
-    const url = new URL(API_URL);
-    url.searchParams.append('token', API_TOKEN);
+    const url = new URL(API_BASE, window.location.origin);
     url.searchParams.append('action', 'base');
 
     const response = await fetch(url.toString());
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await parseJsonResponse(response);
 
-    const data = await response.json();
-    if (!data.ok) return { ok: false, message: data.message || 'API returned ok: false' };
+    if (!response.ok || (typeof data === 'object' && data && 'ok' in data && !data.ok)) {
+      const msgFromData =
+        (typeof data === 'object' && data && 'message' in data && typeof data.message === 'string' ? data.message : undefined) ||
+        (typeof data === 'object' && data && 'error' in data && typeof data.error === 'string' ? data.error : undefined);
+      return {
+        ok: false,
+        message: msgFromData || `API returned status ${response.status}`,
+      };
+    }
 
     return data as BaseData;
   } catch (error) {
@@ -52,17 +62,23 @@ export async function fetchBaseData(): Promise<BaseData | ApiError> {
 
 export async function fetchLogs(from: string, to: string): Promise<LogResponse | ApiError> {
   try {
-    const url = new URL(API_URL);
-    url.searchParams.append('token', API_TOKEN);
+    const url = new URL(API_BASE, window.location.origin);
     url.searchParams.append('action', 'log');
     url.searchParams.append('from', from);
     url.searchParams.append('to', to);
 
     const response = await fetch(url.toString());
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await parseJsonResponse(response);
 
-    const data = await response.json();
-    if (!data.ok) return { ok: false, message: data.message || 'API returned ok: false' };
+    if (!response.ok || (typeof data === 'object' && data && 'ok' in data && !data.ok)) {
+      const msgFromData =
+        (typeof data === 'object' && data && 'message' in data && typeof data.message === 'string' ? data.message : undefined) ||
+        (typeof data === 'object' && data && 'error' in data && typeof data.error === 'string' ? data.error : undefined);
+      return {
+        ok: false,
+        message: msgFromData || `API returned status ${response.status}`,
+      };
+    }
 
     return data as LogResponse;
   } catch (error) {
@@ -75,8 +91,7 @@ export async function fetchLogs(from: string, to: string): Promise<LogResponse |
 
 export async function saveDay(date: string, entries: LogEntry[]): Promise<SaveResponse | ApiError> {
   try {
-    const url = new URL(API_URL);
-    url.searchParams.append('token', API_TOKEN);
+    const url = new URL(API_BASE, window.location.origin);
 
     const body = JSON.stringify({
       action: 'saveDay',
@@ -92,10 +107,17 @@ export async function saveDay(date: string, entries: LogEntry[]): Promise<SaveRe
       body,
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await parseJsonResponse(response);
 
-    const data = await response.json();
-    if (!data.ok) return { ok: false, message: data.message || 'API returned ok: false' };
+    if (!response.ok || (typeof data === 'object' && data && 'ok' in data && !data.ok)) {
+      const msgFromData =
+        (typeof data === 'object' && data && 'message' in data && typeof data.message === 'string' ? data.message : undefined) ||
+        (typeof data === 'object' && data && 'error' in data && typeof data.error === 'string' ? data.error : undefined);
+      return {
+        ok: false,
+        message: msgFromData || `API returned status ${response.status}`,
+      };
+    }
 
     return data as SaveResponse;
   } catch (error) {

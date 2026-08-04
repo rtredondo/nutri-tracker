@@ -31,12 +31,14 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```
-VITE_API_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
-VITE_API_TOKEN=your_shared_secret_token_here
+APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
+APPS_SCRIPT_TOKEN=your_shared_secret_token_here
 ```
 
-- **VITE_API_URL**: The deployment URL of your Google Apps Script Web App
-- **VITE_API_TOKEN**: A shared secret string for API authentication (must match the script's validation)
+**Important:** These variables do NOT use the `VITE_` prefix. They are server-side only and never exposed to the browser.
+
+- **APPS_SCRIPT_URL**: The deployment URL of your Google Apps Script Web App
+- **APPS_SCRIPT_TOKEN**: A shared secret string for API authentication (must match the script's validation)
 
 ### 3. Development
 
@@ -44,7 +46,7 @@ VITE_API_TOKEN=your_shared_secret_token_here
 npm run dev
 ```
 
-Runs on `http://localhost:5173` with hot module replacement.
+Runs on `http://localhost:5173` with hot module replacement. The dev server proxies API calls through Vite's dev proxy using the env vars from `.env.local`.
 
 ### 4. Tests
 
@@ -53,6 +55,19 @@ npm run test
 ```
 
 Unit tests for nutrient maths, especially null handling and coverage calculation.
+
+## Architecture: Server-Side Proxy
+
+The app calls Google Apps Script through a server-side proxy (`/api/sheet`) instead of calling the script directly from the browser. This solves two problems:
+
+1. **CORS**: Google Apps Script web apps don't set CORS headers and don't answer OPTIONS preflight requests. Server-to-server requests bypass CORS entirely.
+2. **Token security**: `APPS_SCRIPT_TOKEN` is never sent to the browser. It only exists on the server and is handled in the Vercel function or dev proxy.
+
+**Development**: Vite's dev proxy (configured in `vite.config.ts`) forwards requests to `/api/sheet` to your Apps Script, appending the token from `.env.local`.
+
+**Production**: Vercel's serverless function (`api/sheet.ts`) handles the same logic and is deployed alongside the app.
+
+In both cases, the browser only talks to `/api/sheet` on its own origin — no exposure to `script.google.com`, no token in the bundle.
 
 ## API Contract
 
@@ -230,14 +245,16 @@ git push -u origin main
 
 ### 3. Set Environment Variables
 
-In Vercel project settings:
+In Vercel project settings → Environment Variables:
 
-- **VITE_API_URL**: `https://script.google.com/macros/d/{SCRIPT_ID}/usercopy/exec`
-- **VITE_API_TOKEN**: Your shared secret (use Vercel secrets feature for sensitive values)
+- **APPS_SCRIPT_URL**: `https://script.google.com/macros/s/YOUR_ACTUAL_DEPLOYMENT_ID/exec`
+- **APPS_SCRIPT_TOKEN**: Your shared secret (use Vercel's secrets feature for sensitive values)
+
+These are used only by the serverless function and never exposed to the browser.
 
 ### 4. Deploy
 
-Vercel auto-deploys on push to main. Your app is live at `https://nutri-tracker.vercel.app`.
+Vercel auto-deploys on push to main. Your app is live at `https://nutri-tracker.vercel.app`. The `/api/sheet` serverless function is automatically deployed alongside the app.
 
 ## Tech Stack
 

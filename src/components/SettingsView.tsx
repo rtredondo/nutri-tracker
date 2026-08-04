@@ -36,7 +36,7 @@ export default function SettingsView({ onRefresh }: SettingsViewProps) {
       });
       onRefresh();
     } else if (!('ok' in result) || !result.ok) {
-      const errorMsg = 'message' in result ? result.message : 'Failed to refresh database';
+      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Failed to refresh database';
       setMessage({
         type: 'error',
         text: errorMsg,
@@ -117,22 +117,16 @@ export default function SettingsView({ onRefresh }: SettingsViewProps) {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">API Configuration</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Connection</h2>
 
         <div className="space-y-3 text-sm">
-          <div>
-            <p className="text-gray-600 dark:text-gray-400">API URL:</p>
-            <p className="font-mono text-xs text-gray-900 dark:text-white break-all">
-              {import.meta.env.VITE_API_URL}
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <p className="text-gray-600 dark:text-gray-400">Connected to spreadsheet</p>
           </div>
-          <div>
-            <p className="text-gray-600 dark:text-gray-400">Token:</p>
-            <p className="font-mono text-xs text-gray-900 dark:text-white">
-              {(import.meta.env.VITE_API_TOKEN || '').slice(0, 8)}
-              {'•'.repeat(Math.max(0, (import.meta.env.VITE_API_TOKEN || '').length - 8))}
-            </p>
-          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            The app communicates with your Google Sheet through a secure server-side proxy. Your authentication token is never exposed to the browser.
+          </p>
         </div>
       </div>
 
