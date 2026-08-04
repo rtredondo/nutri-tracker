@@ -317,10 +317,10 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
                 <>
                   {items.length > 0 && (
                     <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-4 gap-2">
-                      <div>Food</div>
-                      <div className="text-right">Qty</div>
-                      <div className="text-right">kcal</div>
+                      <div>kcal</div>
                       <div className="text-right">Protein</div>
+                      <div className="text-right">Fat</div>
+                      <div className="text-right">Carbs</div>
                     </div>
                   )}
                   <div className="divide-y divide-gray-200 dark:divide-gray-700">
