@@ -97,7 +97,7 @@ export default function App() {
     loadBaseData();
   }, [loadBaseData]);
 
-  if (appState.loading) {
+  if (appState.loading && !appState.foods) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
         <div className="text-center">
@@ -140,10 +140,15 @@ export default function App() {
       {/* Header */}
       <header className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">nutri-tracker</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">nutri-tracker</h1>
+            {appState.loading && appState.foods && (
+              <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 dark:border-t-blue-400 rounded-full animate-spin"></div>
+            )}
+          </div>
           {appState.cacheStale && (
             <div className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900 px-3 py-1 rounded">
-              Using cached data
+              Updating...
             </div>
           )}
         </div>
