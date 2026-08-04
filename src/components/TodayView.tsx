@@ -7,7 +7,6 @@ import { getToday, addDays } from '../lib/dates';
 import { debounce } from '../lib/debounce';
 import { exportToCSV } from '../lib/export';
 import FoodRow from './FoodRow';
-import NutrientSummary from './NutrientSummary';
 import FoodPicker from './FoodPicker';
 
 interface TodayViewProps {
@@ -283,7 +282,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
-      <div className="flex-1 space-y-8 px-4 py-8 pb-96 max-w-4xl mx-auto w-full">
+      <div className="flex-1 space-y-8 px-4 py-8 pb-32 max-w-4xl mx-auto w-full">
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-4">
         <button
@@ -439,114 +438,111 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
 
       </div>
 
-      {/* Sticky Summary Footer */}
-      <div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg p-6 mb-4">
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Daily Target: {settings.calorieTarget.toLocaleString()} kcal
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {totalKcal.total !== null && settings.calorieTarget > 0
-                        ? `${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}% of target`
-                        : ''}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                      <div
-                        className="bg-blue-600 h-full transition-all"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            ((totalKcal.total ?? 0) / settings.calorieTarget) * 100
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* Sticky Summary Footer - Compact */}
+      <div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 shadow-lg">
+        {/* Progress bar at top */}
+        <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all"
+            style={{
+              width: `${Math.min(
+                100,
+                ((totalKcal.total ?? 0) / settings.calorieTarget) * 100
+              )}%`,
+            }}
+          ></div>
+        </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <NutrientSummary
-                  label="Protein"
-                  value={totalProtein.total}
-                  coverage={totalProtein.coverage}
-                  unit="g"
-                />
-                <NutrientSummary
-                  label="Fat"
-                  value={totalFat.total}
-                  coverage={totalFat.coverage}
-                  unit="g"
-                />
-                <NutrientSummary
-                  label="Carbs"
-                  value={totalCarbs.total}
-                  coverage={totalCarbs.coverage}
-                  unit="g"
-                />
+        <div className="max-w-4xl mx-auto px-4 py-2 md:py-3">
+          {/* Main summary row */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 mb-2">
+            {/* Left: Kcal + Target */}
+            <div className="flex items-baseline gap-1 md:gap-2 flex-shrink-0">
+              <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
+              </div>
+              <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                {totalKcal.total !== null && settings.calorieTarget > 0
+                  ? `${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}%`
+                  : ''}
+              </div>
+            </div>
+
+            {/* Right: P/F/C compact figures */}
+            <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm flex-shrink-0">
+              <div className="text-right">
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">P</div>
+              </div>
+              <div className="text-right">
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">F</div>
+              </div>
+              <div className="text-right">
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">C</div>
               </div>
             </div>
           </div>
 
-          {/* Status Line */}
-          <div className="text-center text-sm mb-4">
-            {autoSaveLoading && <span className="text-gray-600 dark:text-gray-400">Saving…</span>}
-            {!autoSaveLoading && autoSaveError && retryCount >= 3 && (
+          {/* Status + Action buttons row */}
+          <div className="flex items-center justify-between gap-2 text-xs">
+            {/* Status line */}
+            <div className="text-gray-600 dark:text-gray-400 flex-1 min-w-0 truncate">
+              {autoSaveLoading && <span>Saving…</span>}
+              {!autoSaveLoading && autoSaveError && retryCount >= 3 && (
+                <button
+                  onClick={handleSave}
+                  className="text-red-600 dark:text-red-400 hover:underline font-medium whitespace-nowrap"
+                >
+                  Save failed
+                </button>
+              )}
+              {!autoSaveLoading && autoSaveError && retryCount < 3 && (
+                <span className="text-red-600 dark:text-red-400">Retrying…</span>
+              )}
+              {!autoSaveLoading && !autoSaveError && lastSavedTime && !hasUnsaved && (
+                <span>
+                  Saved {new Date(lastSavedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {!autoSaveLoading && !autoSaveError && hasUnsaved && (
+                <span>Unsaved</span>
+              )}
+            </div>
+
+            {/* Action buttons - compact */}
+            <div className="flex gap-1 md:gap-2 flex-shrink-0">
+              <button
+                onClick={handleResetToDefault}
+                className="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap"
+              >
+                Export
+              </button>
               <button
                 onClick={handleSave}
-                className="text-red-600 dark:text-red-400 hover:underline font-medium"
+                disabled={!hasUnsaved || autoSaveLoading}
+                className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded font-medium transition whitespace-nowrap ${
+                  hasUnsaved && !autoSaveLoading
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                    : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                }`}
               >
-                Save failed — tap to retry
+                Sync
               </button>
-            )}
-            {!autoSaveLoading && autoSaveError && retryCount < 3 && (
-              <span className="text-red-600 dark:text-red-400">Save failed — retrying…</span>
-            )}
-            {!autoSaveLoading && !autoSaveError && lastSavedTime && !hasUnsaved && (
-              <span className="text-gray-600 dark:text-gray-400">
-                Saved {new Date(lastSavedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            {!autoSaveLoading && !autoSaveError && hasUnsaved && (
-              <span className="text-gray-600 dark:text-gray-400">Unsaved changes</span>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={handleResetToDefault}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Reset to default
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Export
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasUnsaved || autoSaveLoading}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                hasUnsaved && !autoSaveLoading
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Sync now
-            </button>
+            </div>
           </div>
         </div>
       </div>
