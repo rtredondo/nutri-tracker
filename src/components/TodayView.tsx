@@ -313,49 +313,49 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               {/* Collapsible Header */}
               <button
                 onClick={() => handleToggleMeal(meal)}
-                className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-left"
+                className="w-full bg-gray-50 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-left"
               >
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-2 sm:gap-4">
                   {/* Left: Chevron, Meal name, Item count */}
-                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 flex-1">
                     <span
-                      className="flex-shrink-0 transition-transform text-sm"
+                      className="flex-shrink-0 transition-transform text-xs sm:text-sm"
                       style={{
                         transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
                       }}
                     >
                       ▼
                     </span>
-                    <span className="font-semibold text-sm md:text-base text-gray-900 dark:text-white truncate">
+                    <span className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 dark:text-white truncate">
                       {meal}
                     </span>
-                    <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                       {items.length}
                     </span>
                   </div>
 
-                  {/* Right: Per-meal totals (visible at all widths) */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {/* Right: Per-meal totals (visible at all widths, compact on mobile) */}
+                  <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                         {mealKcal.total === null ? '—' : mealKcal.total.toFixed(0)}
                       </div>
                       <div className="text-xs hidden sm:block">kcal</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                         {mealProtein.total === null ? '—' : mealProtein.total.toFixed(0)}
                       </div>
                       <div className="text-xs hidden sm:block">P</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                         {mealFat.total === null ? '—' : mealFat.total.toFixed(0)}
                       </div>
                       <div className="text-xs hidden sm:block">F</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                         {mealCarbs.total === null ? '—' : mealCarbs.total.toFixed(0)}
                       </div>
                       <div className="text-xs hidden sm:block">C</div>

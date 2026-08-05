@@ -20,40 +20,67 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
   return (
     <>
       <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="font-medium text-gray-900 dark:text-white truncate">{entry.food_name}</p>
-              <span className={`inline-block text-xs px-2 py-1 rounded-full ${categoryColors.pill}`}>
-                {food.category}
+        {/* Mobile: stacked layout below sm, Desktop: single line */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+          {/* Line 1 (Mobile): Full food name, no truncation */}
+          <div className="flex-1 min-w-0 mb-2 sm:mb-0">
+            <p className="font-medium text-gray-900 dark:text-white break-words">{entry.food_name}</p>
+          </div>
+
+          {/* Line 2 (Mobile): Category pill + Quantity input + Actions */}
+          <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:gap-4">
+            {/* Category pill - hidden on mobile, shown on desktop in original location */}
+            <span className={`hidden sm:inline-block text-xs px-2 py-1 rounded-full flex-shrink-0 ${categoryColors.pill}`}>
+              {food.category}
+            </span>
+
+            {/* Quantity input container */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={entry.qty}
+                onChange={(e) => onQuantityChange(parseFloat(e.target.value) || 0)}
+                inputMode="decimal"
+                className="w-16 sm:w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                aria-label="Quantity"
+              />
+              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                {entry.unit}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {entry.qty} {entry.unit}
-            </p>
+
+            {/* Action buttons */}
+            <button
+              onClick={() => setShowSwapPicker(true)}
+              className="min-w-11 sm:min-w-auto px-2 py-1 sm:px-0 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium text-center"
+              aria-label="Change food"
+              title="Change"
+            >
+              <span className="hidden sm:inline">Change</span>
+              <span className="sm:hidden">✎</span>
+            </button>
+            <button
+              onClick={onRemove}
+              className="min-w-11 sm:min-w-auto px-2 py-1 sm:px-0 text-sm text-red-600 dark:text-red-400 hover:underline font-medium text-center"
+              aria-label="Remove food"
+              title="Remove"
+            >
+              <span className="hidden sm:inline">Remove</span>
+              <span className="sm:hidden">✕</span>
+            </button>
           </div>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            value={entry.qty}
-            onChange={(e) => onQuantityChange(parseFloat(e.target.value) || 0)}
-            inputMode="decimal"
-            className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
-          />
-          <button
-            onClick={() => setShowSwapPicker(true)}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-          >
-            Change
-          </button>
-          <button
-            onClick={onRemove}
-            className="text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
-          >
-            Remove
-          </button>
         </div>
+
+        {/* Category pill on mobile - shown on its own line */}
+        <div className="flex items-center gap-2 mb-2 sm:hidden">
+          <span className={`inline-block text-xs px-2 py-1 rounded-full ${categoryColors.pill}`}>
+            {food.category}
+          </span>
+        </div>
+
+        {/* Line 3 (Mobile): Nutrients grid */}
         <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 dark:text-gray-400">
           {PRIMARY_NUTRIENTS.map((nutrient) => (
             <div key={nutrient}>
