@@ -28,7 +28,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           </div>
 
           {/* Line 2 (Mobile): Category pill + Quantity input + Actions */}
-          <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:gap-4">
+          <div className="flex items-center gap-1.5 mb-2 sm:mb-0 sm:gap-4">
             {/* Category pill - visible at all widths */}
             <span className={`inline-block text-xs px-2 py-1 rounded-full flex-shrink-0 ${categoryColors.pill}`}>
               {food.category}
@@ -54,7 +54,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
             {/* Action buttons */}
             <button
               onClick={() => setShowSwapPicker(true)}
-              className="min-w-11 min-h-11 sm:min-w-auto sm:min-h-auto px-2 py-1 sm:px-0 sm:py-0 flex items-center justify-center sm:block text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              className="min-w-11 min-h-11 sm:min-w-auto sm:min-h-auto px-2 py-1 sm:px-0 sm:py-0 flex items-center justify-center sm:block rounded-full sm:rounded-none bg-gray-100 dark:bg-gray-700 sm:bg-transparent sm:dark:bg-transparent text-xl sm:text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-600 sm:hover:bg-transparent sm:hover:underline font-medium"
               aria-label="Change food"
               title="Change"
             >
@@ -63,7 +63,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
             </button>
             <button
               onClick={onRemove}
-              className="min-w-11 min-h-11 sm:min-w-auto sm:min-h-auto px-2 py-1 sm:px-0 sm:py-0 flex items-center justify-center sm:block text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+              className="min-w-11 min-h-11 sm:min-w-auto sm:min-h-auto px-2 py-1 sm:px-0 sm:py-0 flex items-center justify-center sm:block rounded-full sm:rounded-none bg-gray-100 dark:bg-gray-700 sm:bg-transparent sm:dark:bg-transparent text-xl sm:text-sm text-red-600 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-600 sm:hover:bg-transparent sm:hover:underline font-medium"
               aria-label="Remove food"
               title="Remove"
             >
