@@ -3,10 +3,7 @@ import { fetchBaseData } from './lib/api';
 import { cacheBaseData, getCachedBaseData } from './lib/storage';
 import type { Food, LogEntry } from './lib/nutrients';
 import TodayView from './components/TodayView';
-import WeekView from './components/WeekView';
-import SettingsView from './components/SettingsView';
-
-type View = 'today' | 'week' | 'settings';
+import SettingsModal from './components/SettingsModal';
 
 interface AppState {
   foods: Food[] | null;
@@ -17,7 +14,6 @@ interface AppState {
 }
 
 export default function App() {
-  const [view, setView] = useState<View>('today');
   const [appState, setAppState] = useState<AppState>({
     foods: null,
     cardapio: null,
@@ -25,6 +21,7 @@ export default function App() {
     error: null,
     cacheStale: false,
   });
+  const [showSettings, setShowSettings] = useState(false);
 
   const loadBaseData = useCallback(async () => {
     const cached = getCachedBaseData();
@@ -146,62 +143,34 @@ export default function App() {
               <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 dark:border-t-blue-400 rounded-full animate-spin"></div>
             )}
           </div>
-          {appState.cacheStale && appState.error && (
-            <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded">
-              {appState.error}
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {appState.cacheStale && appState.error && (
+              <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded">
+                {appState.error}
+              </div>
+            )}
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              aria-label="Settings"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
-        {view === 'today' && (
+        {appState.foods && appState.cardapio && (
           <TodayView foods={appState.foods} cardapio={appState.cardapio} />
-        )}
-        {view === 'week' && (
-          <WeekView />
-        )}
-        {view === 'settings' && (
-          <SettingsView onRefresh={handleRefresh} />
         )}
       </main>
 
-      {/* Navigation */}
-      <nav className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-4xl mx-auto px-4 flex justify-center gap-4 py-4">
-          <button
-            onClick={() => setView('today')}
-            className={`px-6 py-2 rounded-lg font-medium transition ${
-              view === 'today'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Today
-          </button>
-          <button
-            onClick={() => setView('week')}
-            className={`px-6 py-2 rounded-lg font-medium transition ${
-              view === 'week'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Week
-          </button>
-          <button
-            onClick={() => setView('settings')}
-            className={`px-6 py-2 rounded-lg font-medium transition ${
-              view === 'settings'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Settings
-          </button>
-        </div>
-      </nav>
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} onRefresh={handleRefresh} />
+      )}
     </div>
   );
 }
