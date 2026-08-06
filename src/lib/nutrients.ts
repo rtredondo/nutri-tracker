@@ -49,7 +49,13 @@ export function computeNutrient(food: Food, nutrient: Nutrient, quantity: number
   const baseValue = food[nutrient];
   const coerced = coerceNutrient(baseValue);
   if (coerced === null) return null;
-  return (coerced * quantity) / food.basis_qty;
+
+  let basisQty = coerceNutrient(food.basis_qty);
+  if (basisQty === null || basisQty === 0) {
+    basisQty = 100;
+  }
+
+  return (coerced * quantity) / basisQty;
 }
 
 export function sumNutrients(entries: LogEntry[], nutrient: Nutrient): { total: number | null; coverage: number } {

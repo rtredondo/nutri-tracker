@@ -60,6 +60,31 @@ describe('nutrients', () => {
       const badFood = { ...food, kcal: Infinity };
       expect(computeNutrient(badFood, 'kcal', 100)).toBeNull();
     });
+
+    it('coerces basis_qty string "100g" to 100', () => {
+      const badFood = { ...food, basis_qty: '100g' as any };
+      expect(computeNutrient(badFood, 'kcal', 50)).toBe(50);
+    });
+
+    it('falls back to 100 when basis_qty is non-numeric string', () => {
+      const badFood = { ...food, basis_qty: 'abc' as any };
+      expect(computeNutrient(badFood, 'kcal', 50)).toBe(50);
+    });
+
+    it('falls back to 100 when basis_qty is 0', () => {
+      const badFood = { ...food, basis_qty: 0 };
+      expect(computeNutrient(badFood, 'kcal', 50)).toBe(50);
+    });
+
+    it('falls back to 100 when basis_qty is null', () => {
+      const badFood = { ...food, basis_qty: null as any };
+      expect(computeNutrient(badFood, 'kcal', 50)).toBe(50);
+    });
+
+    it('coerces basis_qty numeric string "100" to 100', () => {
+      const badFood = { ...food, basis_qty: '100' as any };
+      expect(computeNutrient(badFood, 'kcal', 50)).toBe(50);
+    });
   });
 
   describe('coerceNutrient', () => {
