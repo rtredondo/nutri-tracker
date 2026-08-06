@@ -244,7 +244,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={() => setDate(addDays(date, -1))}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="px-4 py-2 border border-blue-300 dark:border-blue-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 transition font-medium"
         >
           ← Prev
         </button>
@@ -256,7 +256,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         />
         <button
           onClick={() => setDate(addDays(date, 1))}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="px-4 py-2 border border-blue-300 dark:border-blue-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 transition font-medium"
         >
           Next →
         </button>

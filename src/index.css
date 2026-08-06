@@ -4,8 +4,10 @@ html {
   background-color: white;
 }
 
-html.dark {
-  background-color: rgb(17, 24, 39);
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: rgb(17, 24, 39);
+  }
 }
 
 body {
@@ -14,8 +16,10 @@ body {
   background-color: white;
 }
 
-body.dark {
-  background-color: rgb(17, 24, 39);
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: rgb(17, 24, 39);
+  }
 }
 
 #root {
