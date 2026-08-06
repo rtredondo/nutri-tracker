@@ -96,7 +96,7 @@ export default function App() {
 
   if (appState.loading && !appState.foods) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading food database...</p>
@@ -107,7 +107,7 @@ export default function App() {
 
   if (appState.error && !appState.foods) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-gray-900">
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Error</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{appState.error}</p>
@@ -124,7 +124,7 @@ export default function App() {
 
   if (!appState.foods || !appState.cardapio) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-gray-900">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">No data available</p>
         </div>
@@ -133,7 +133,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
+    <div className="flex flex-col min-h-[100dvh] bg-white dark:bg-gray-900">
       {/* Header */}
       <header className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">

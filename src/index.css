@@ -1,11 +1,25 @@
 @import "tailwindcss";
 
+html {
+  background-color: white;
+}
+
+html.dark {
+  background-color: rgb(17, 24, 39);
+}
+
 body {
   margin: 0;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background-color: white;
+}
+
+body.dark {
+  background-color: rgb(17, 24, 39);
 }
 
 #root {
+  min-height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

@@ -422,7 +422,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       </div>
 
       {/* Sticky Summary Footer - Compact */}
-      <div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 shadow-lg">
+      <div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 shadow-lg pb-[env(safe-area-inset-bottom)]">
         {/* Progress bar at top */}
         <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
           <div
