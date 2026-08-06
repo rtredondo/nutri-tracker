@@ -428,8 +428,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         <div className="max-w-4xl mx-auto px-4 py-2 md:py-3">
           {/* Main summary row */}
           <div className="flex items-center justify-between gap-2 md:gap-4 mb-2">
-            {/* Left: Kcal + Target */}
-            <div className="flex items-baseline gap-1 md:gap-2 flex-shrink-0">
+            {/* Left: Date, Kcal + Target */}
+            <div className="flex items-baseline gap-2 md:gap-3 flex-shrink-0 min-w-0">
+              <div className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                {new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              </div>
               <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                 {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
               </div>
