@@ -97,24 +97,35 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setSaveError(null);
   };
 
-  const handleAddFood = (selectedFood: Food, meal: string) => {
-    const newEntry: LogEntry = {
-      meal,
-      food_id: selectedFood.food_id,
-      food_name: selectedFood.food_name,
-      qty: 100,
-      unit: selectedFood.basis_unit,
-      kcal: selectedFood.kcal,
-      protein_g: selectedFood.protein_g,
-      fat_g: selectedFood.fat_g,
-      sat_fat_g: selectedFood.sat_fat_g,
-      carbs_g: selectedFood.carbs_g,
-      sugars_g: selectedFood.sugars_g,
-      fibre_g: selectedFood.fibre_g,
-      salt_g: selectedFood.salt_g,
-    };
+  const createLogEntry = (food: Food, meal: string): LogEntry => ({
+    meal,
+    food_id: food.food_id,
+    food_name: food.food_name,
+    qty: 100,
+    unit: food.basis_unit,
+    kcal: food.kcal,
+    protein_g: food.protein_g,
+    fat_g: food.fat_g,
+    sat_fat_g: food.sat_fat_g,
+    carbs_g: food.carbs_g,
+    sugars_g: food.sugars_g,
+    fibre_g: food.fibre_g,
+    salt_g: food.salt_g,
+  });
 
+  const handleAddFood = (selectedFood: Food, meal: string) => {
+    const newEntry = createLogEntry(selectedFood, meal);
     const updated = [...entries, newEntry];
+    setEntries(updated);
+    cacheDayEdits(date, updated);
+    setHasUnsaved(true);
+    setShowFoodPicker(null);
+    setSaveError(null);
+  };
+
+  const handleAddMultipleFoods = (selectedFoods: Food[], meal: string) => {
+    const newEntries = selectedFoods.map((food) => createLogEntry(food, meal));
+    const updated = [...entries, ...newEntries];
     setEntries(updated);
     cacheDayEdits(date, updated);
     setHasUnsaved(true);
@@ -496,6 +507,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         <FoodPicker
           foods={foods}
           onSelect={(food) => handleAddFood(food, showFoodPicker)}
+          onSelectMultiple={(foods) => handleAddMultipleFoods(foods, showFoodPicker)}
           onClose={() => setShowFoodPicker(null)}
         />
       )}

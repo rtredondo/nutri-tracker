@@ -1,36 +1,44 @@
 import { useState, useMemo } from 'react';
 import type { Food } from '../lib/nutrients';
-import { getCategoryColors } from '../lib/categories';
+import { getCategoryColors, getAllCategories } from '../lib/categories';
 
 interface FoodPickerProps {
   foods: Food[];
-  onSelect: (food: Food) => void;
+  onSelect?: (food: Food) => void;
+  onSelectMultiple?: (foods: Food[]) => void;
   onClose: () => void;
   filterCategory?: string;
   excludeFoodId?: string;
   headerLabel?: string;
+  isSwapFlow?: boolean;
 }
 
 export default function FoodPicker({
   foods,
   onSelect,
+  onSelectMultiple,
   onClose,
   filterCategory,
   excludeFoodId,
-  headerLabel
+  headerLabel,
+  isSwapFlow = false,
 }: FoodPickerProps) {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(filterCategory || null);
-  const [showAllCategories, setShowAllCategories] = useState(!filterCategory);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(filterCategory || 'All');
+  const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
+
+  const allCategories = useMemo(() => {
+    return getAllCategories();
+  }, []);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(foods.map((f) => f.category))).sort();
-  }, [foods]);
+    return filterCategory ? [filterCategory] : ['All', ...allCategories];
+  }, [filterCategory, allCategories]);
 
   const filtered = useMemo(() => {
     return foods.filter((f) => {
       const matchesSearch = f.food_name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = !selectedCategory || f.category === selectedCategory;
+      const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
       const notExcluded = !excludeFoodId || f.food_id !== excludeFoodId;
       return matchesSearch && matchesCategory && notExcluded;
     });
@@ -47,74 +55,90 @@ export default function FoodPicker({
     return grouped;
   }, [filtered]);
 
+  const handleFoodClick = (food: Food) => {
+    if (isSwapFlow && onSelect) {
+      // Single-select mode for swap flow
+      onSelect(food);
+    } else {
+      // Multi-select mode
+      const newSelected = new Set(selectedFoods);
+      if (newSelected.has(food.food_id)) {
+        newSelected.delete(food.food_id);
+      } else {
+        newSelected.add(food.food_id);
+      }
+      setSelectedFoods(newSelected);
+    }
+  };
+
+  const handleDone = () => {
+    if (onSelectMultiple && selectedFoods.size > 0) {
+      const selectedFoodObjects = foods.filter((f) => selectedFoods.has(f.food_id));
+      onSelectMultiple(selectedFoodObjects);
+      setSelectedFoods(new Set());
+      onClose();
+    }
+  };
+
+  const handleBackdropClick = () => {
+    setSelectedFoods(new Set());
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
             {headerLabel || 'Add Food'}
           </h3>
+
+          {/* Search input - no autofocus */}
           <input
             type="text"
             placeholder="Search foods..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white mb-3"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white mb-4"
           />
 
-          {/* Category filters */}
-          <div className="flex flex-wrap gap-2">
-            {!filterCategory && (
-              <button
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setShowAllCategories(true);
-                }}
-                className={`px-3 py-1 rounded-full text-sm transition ${
-                  selectedCategory === null
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                All
-              </button>
-            )}
-            {(showAllCategories ? categories : (filterCategory ? [filterCategory] : [])).map((cat) => {
-              const colors = getCategoryColors(cat);
-              return (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    if (filterCategory && cat === filterCategory) {
-                      setShowAllCategories(true);
-                      setSelectedCategory(null);
-                    } else {
-                      setSelectedCategory(String(cat));
-                      setShowAllCategories(false);
-                    }
-                  }}
-                  className={`px-3 py-1 rounded-full text-sm transition ${
-                    selectedCategory === cat
-                      ? `${colors.pill} ring-2 ring-offset-2 dark:ring-offset-gray-800`
-                      : colors.pill
-                  }`}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-            {filterCategory && showAllCategories && (
-              <button
-                onClick={() => setShowAllCategories(false)}
-                className="px-3 py-1 rounded-full text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              >
-                ✕
-              </button>
-            )}
+          {/* Category pills - horizontal scrollable line */}
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className="flex gap-2 flex-nowrap whitespace-nowrap pb-2">
+              {categories.map((cat) => {
+                const isActive = selectedCategory === cat;
+                const colors = cat === 'All' ? undefined : getCategoryColors(cat);
+
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-sm flex-shrink-0 transition ${
+                      isActive
+                        ? cat === 'All'
+                          ? 'bg-blue-600 text-white'
+                          : `${colors?.pill} ring-2 ring-offset-2 dark:ring-offset-gray-800`
+                        : cat === 'All'
+                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          : colors?.pill || 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
+        {/* Food list */}
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -122,7 +146,7 @@ export default function FoodPicker({
             </div>
           ) : (
             <div>
-              {showAllCategories && !filterCategory ? (
+              {selectedCategory === 'All' ? (
                 // Grouped view
                 Object.entries(groupedByCategory).map(([category, categoryFoods]) => {
                   const colors = getCategoryColors(category);
@@ -135,14 +159,23 @@ export default function FoodPicker({
                         {categoryFoods.map((food) => (
                           <button
                             key={food.food_id}
-                            onClick={() => onSelect(food)}
-                            className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                            onClick={() => handleFoodClick(food)}
+                            className={`w-full text-left px-4 py-3 transition flex items-center gap-3 ${
+                              selectedFoods.has(food.food_id)
+                                ? 'bg-blue-50 dark:bg-blue-900'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
                           >
-                            <p className="font-medium text-gray-900 dark:text-white">{food.food_name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
-                              {food.basis_unit}
-                            </p>
+                            {selectedFoods.has(food.food_id) && (
+                              <div className="text-blue-600 dark:text-blue-400">✓</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white">{food.food_name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
+                                {food.basis_unit}
+                              </p>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -155,14 +188,23 @@ export default function FoodPicker({
                   {filtered.map((food) => (
                     <button
                       key={food.food_id}
-                      onClick={() => onSelect(food)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                      onClick={() => handleFoodClick(food)}
+                      className={`w-full text-left px-4 py-3 transition flex items-center gap-3 ${
+                        selectedFoods.has(food.food_id)
+                          ? 'bg-blue-50 dark:bg-blue-900'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
                     >
-                      <p className="font-medium text-gray-900 dark:text-white">{food.food_name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
-                        {food.basis_unit}
-                      </p>
+                      {selectedFoods.has(food.food_id) && (
+                        <div className="text-blue-600 dark:text-blue-400">✓</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white">{food.food_name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
+                          {food.basis_unit}
+                        </p>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -171,14 +213,44 @@ export default function FoodPicker({
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          >
-            Close
-          </button>
-        </div>
+        {/* Footer */}
+        {!isSwapFlow && (
+          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {selectedFoods.size > 0 ? `${selectedFoods.size} selected` : ''}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBackdropClick}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDone}
+                disabled={selectedFoods.size === 0}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  selectedFoods.size === 0
+                    ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isSwapFlow && (
+          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -90,6 +90,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           filterCategory={food.category}
           excludeFoodId={food.food_id}
           headerLabel={`Swap — ${food.category}`}
+          isSwapFlow={true}
           onSelect={(selectedFood) => {
             onSwap(selectedFood);
             setShowSwapPicker(false);
