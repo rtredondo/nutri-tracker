@@ -38,10 +38,18 @@ export interface LogEntry {
   salt_g: number | null;
 }
 
+export function coerceNutrient(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
 export function computeNutrient(food: Food, nutrient: Nutrient, quantity: number): number | null {
   const baseValue = food[nutrient];
-  if (baseValue === null) return null;
-  return (baseValue * quantity) / food.basis_qty;
+  const coerced = coerceNutrient(baseValue);
+  if (coerced === null) return null;
+  return (coerced * quantity) / food.basis_qty;
 }
 
 export function sumNutrients(entries: LogEntry[], nutrient: Nutrient): { total: number | null; coverage: number } {
@@ -52,7 +60,7 @@ export function sumNutrients(entries: LogEntry[], nutrient: Nutrient): { total: 
 
   for (const entry of entries) {
     const value = entry[nutrient];
-    if (value !== null) {
+    if (value !== null && Number.isFinite(value)) {
       sum = (sum ?? 0) + value;
       countWithData++;
     }

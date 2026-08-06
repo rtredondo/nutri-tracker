@@ -72,12 +72,17 @@ export default function WeekView() {
   };
 
   const { monday, sunday } = getWeekBoundaries(weekDate);
-  const daysWithLogs = days.filter((d) => d.kcal !== null).length;
+  const daysWithLogs = days.filter((d) => d.kcal !== null && Number.isFinite(d.kcal)).length;
   const weekAvg =
     daysWithLogs > 0
-      ? days.reduce((sum, d) => sum + (d.kcal ?? 0), 0) / daysWithLogs
+      ? days.reduce((sum, d) => sum + (d.kcal !== null && Number.isFinite(d.kcal) ? d.kcal : 0), 0) / daysWithLogs
       : 0;
-  const weekTotal = days.reduce((sum, d) => sum + (d.kcal ?? 0), 0);
+  const weekTotal = days.reduce((sum, d) => {
+    if (d.kcal !== null && Number.isFinite(d.kcal)) {
+      return sum + d.kcal;
+    }
+    return sum;
+  }, 0);
 
   const chartData = days.map((d) => ({
     date: d.date.slice(5),
