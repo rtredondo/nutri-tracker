@@ -87,11 +87,11 @@ export default function FoodPicker({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-4 overflow-y-auto"
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[85vh] flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[85dvh] flex flex-col my-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -139,7 +139,7 @@ export default function FoodPicker({
         </div>
 
         {/* Food list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {filtered.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               No foods found
