@@ -262,32 +262,6 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         </button>
       </div>
 
-      {/* Prominent Save Button */}
-      <button
-        onClick={handleSave}
-        disabled={!hasUnsaved || saveLoading}
-        className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
-          saveError
-            ? 'bg-red-600 text-white hover:bg-red-700'
-            : saveSucessMessage
-              ? 'bg-green-600 text-white'
-              : hasUnsaved && !saveLoading
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {saveLoading && (
-          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {saveLoading && 'Saving…'}
-        {!saveLoading && saveSucessMessage && '✓ Saved'}
-        {!saveLoading && saveError && 'Save failed — tap to retry'}
-        {!saveLoading && !saveError && !saveSucessMessage && (hasUnsaved ? 'Save' : 'Saved')}
-      </button>
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">
           {error}
@@ -477,27 +451,47 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
             </div>
           </div>
 
-          {/* Status + Action buttons row */}
-          <div className="flex items-center justify-between gap-2 text-xs">
-            {/* Status line */}
-            <div className="text-gray-600 dark:text-gray-400 flex-1 min-w-0 truncate">
-              {saveError && (
-                <span className="text-red-600 dark:text-red-400 font-medium">{saveError}</span>
+          {/* Action buttons row */}
+          <div className="flex items-center justify-between gap-1.5 md:gap-2 text-xs md:text-sm">
+            {/* Save button - primary action */}
+            <button
+              onClick={handleSave}
+              disabled={!hasUnsaved || saveLoading}
+              className={`px-2 md:px-3 py-1 rounded font-medium whitespace-nowrap transition flex items-center gap-1 flex-shrink-0 ${
+                saveError
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : saveSucessMessage
+                    ? 'bg-green-600 text-white'
+                    : hasUnsaved && !saveLoading
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {saveLoading && (
+                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
               )}
-              {!saveError && saveSucessMessage && (
-                <span className="text-green-600 dark:text-green-400">✓ Saved</span>
-              )}
-            </div>
+              <span>
+                {saveLoading ? 'Saving…' : saveSucessMessage ? '✓ Saved' : saveError ? 'Save failed' : (hasUnsaved ? 'Save' : 'Saved')}
+              </span>
+            </button>
 
-            {/* Action buttons - compact */}
-            <div className="flex gap-1 md:gap-2 flex-shrink-0">
-              <button
-                onClick={handleResetToDefault}
-                className="px-2 md:px-3 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap"
-              >
-                Reset
-              </button>
-            </div>
+            {/* Status message if error */}
+            {saveError && !saveLoading && (
+              <div className="text-red-600 dark:text-red-400 font-medium flex-1 min-w-0 truncate text-xs">
+                Tap to retry
+              </div>
+            )}
+
+            {/* Reset button - secondary action */}
+            <button
+              onClick={handleResetToDefault}
+              className="px-2 md:px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap transition flex-shrink-0"
+            >
+              Reset
+            </button>
           </div>
         </div>
       </div>
