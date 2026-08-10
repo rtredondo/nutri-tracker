@@ -239,7 +239,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
-      <div className="flex-1 space-y-8 px-4 py-8 pb-32 max-w-4xl mx-auto w-full">
+      <div className="flex-1 space-y-8 px-4 py-8 pb-56 max-w-4xl mx-auto w-full">
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-4">
         <button
@@ -395,8 +395,8 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
 
       </div>
 
-      {/* Sticky Summary Footer - Compact */}
-      <div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 shadow-lg pb-[env(safe-area-inset-bottom)]">
+      {/* Fixed Summary Footer - Compact */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 shadow-lg pb-[env(safe-area-inset-bottom)]">
         {/* Progress bar at top */}
         <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
           <div
@@ -457,7 +457,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
             <button
               onClick={handleSave}
               disabled={!hasUnsaved || saveLoading}
-              className={`px-2 md:px-3 py-1 rounded font-medium whitespace-nowrap transition flex items-center gap-1 flex-shrink-0 ${
+              className={`px-4 py-2.5 md:px-5 md:py-3 rounded font-semibold whitespace-nowrap transition flex items-center justify-center gap-2 flex-shrink-0 min-h-11 md:min-h-12 text-sm md:text-base ${
                 saveError
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : saveSucessMessage
@@ -468,7 +468,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               }`}
             >
               {saveLoading && (
-                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
