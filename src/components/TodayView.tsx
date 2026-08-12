@@ -239,7 +239,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const totalCarbs = sumNutrients(entries, 'carbs_g');
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
+    <div className="flex flex-col min-h-[100dvh] bg-white dark:bg-gray-900">
       <div className="flex-1 space-y-8 px-4 py-8 pb-56 max-w-4xl mx-auto w-full">
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-4">
