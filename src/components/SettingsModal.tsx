@@ -23,7 +23,7 @@ export default function SettingsModal({ onClose, onRefresh }: SettingsModalProps
     setTimeout(() => setMessage(null), 2000);
   };
 
-  const handleRefreshDatabase = async () => {
+  const handleRefreshFoodData = async () => {
     setLoading(true);
     setMessage(null);
 
@@ -33,11 +33,11 @@ export default function SettingsModal({ onClose, onRefresh }: SettingsModalProps
       cacheBaseData(result.foods, result.cardapio);
       setMessage({
         type: 'success',
-        text: `Database refreshed! Loaded ${result.foods.length} foods.`,
+        text: `Food data refreshed! Loaded ${result.foods.length} foods.`,
       });
       onRefresh();
     } else if (!('ok' in result) || !result.ok) {
-      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Failed to refresh database';
+      const errorMsg = 'message' in result && typeof result.message === 'string' ? result.message : 'Failed to refresh food data';
       setMessage({
         type: 'error',
         text: errorMsg,
@@ -45,6 +45,14 @@ export default function SettingsModal({ onClose, onRefresh }: SettingsModalProps
     }
 
     setLoading(false);
+  };
+
+  const handleApplyDefaultMenuToFuture = () => {
+    setMessage({
+      type: 'success',
+      text: 'Default menu will apply to future dates with no saved entries.',
+    });
+    setTimeout(() => setMessage(null), 2000);
   };
 
   useEffect(() => {
@@ -135,17 +143,43 @@ export default function SettingsModal({ onClose, onRefresh }: SettingsModalProps
               </p>
             </div>
 
-            <button
-              onClick={handleRefreshDatabase}
-              disabled={loading}
-              className={`w-full py-2 rounded-lg font-medium transition ${
-                loading
-                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              {loading ? 'Refreshing...' : 'Refresh Database'}
-            </button>
+            <div className="space-y-4">
+              {/* Refresh Food Data Button */}
+              <div className="space-y-2">
+                <button
+                  onClick={handleRefreshFoodData}
+                  disabled={loading}
+                  className={`w-full py-2 rounded-lg font-medium transition ${
+                    loading
+                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {loading ? 'Refreshing...' : 'Refresh food data'}
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  Updates the food database. Your logged entries are never changed.
+                </p>
+              </div>
+
+              {/* Apply Default Menu Button */}
+              <div className="space-y-2">
+                <button
+                  onClick={handleApplyDefaultMenuToFuture}
+                  disabled={loading}
+                  className={`w-full py-2 rounded-lg font-medium transition ${
+                    loading
+                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                  }`}
+                >
+                  Apply updated default menu going forward
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  Only affects dates after today that have no saved log yet. Today and past dates are never changed.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Connection */}

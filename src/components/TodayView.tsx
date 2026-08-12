@@ -48,14 +48,15 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       if ('ok' in result && result.ok && result.entries.length > 0) {
         setEntries(result.entries);
       } else {
-        // Use default cardapio
+        // Use default cardapio. Note: cardapio is intentionally not a dependency.
+        // When the food database refreshes, it must never affect entries for any date.
         setEntries(cardapio.filter((e) => e.meal)); // Ensure valid entries
       }
 
     };
 
     loadDay();
-  }, [date, cardapio]);
+  }, [date]);
 
   // Save current day when navigating to another date
   const prevDateRef = useRef(date);
