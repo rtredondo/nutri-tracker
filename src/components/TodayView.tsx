@@ -476,7 +476,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               {showSummaryInfoPopover && (
                 <div
                   ref={summaryPopoverRef}
-                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10 min-w-max"
+                  className="absolute right-0 bottom-full mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 min-w-max max-h-96"
                 >
                   <div className="px-3 py-2 text-xs space-y-1">
                     <div className="text-gray-900 dark:text-white font-semibold pb-1 border-b border-gray-200 dark:border-gray-700">
