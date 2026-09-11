@@ -123,9 +123,9 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
 
         {/* Line 3 (Mobile): Compact nutrient line - 5 values only */}
         <div className="mt-2 flex flex-wrap items-baseline gap-1.5 text-xs sm:text-sm">
-          {/* kcal: prominent, no label */}
+          {/* kcal: prominent, with unit */}
           <span className="font-semibold text-gray-900 dark:text-white">
-            {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}
+            {entry.kcal === null ? '—' : `${entry.kcal.toFixed(0)} kcal`}
           </span>
           <span className="text-gray-400 dark:text-gray-500">·</span>
 

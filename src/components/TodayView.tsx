@@ -26,7 +26,9 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSucessMessage, setSaveSuccessMessage] = useState(false);
+  const [showSummaryInfoPopover, setShowSummaryInfoPopover] = useState(false);
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const summaryPopoverRef = useRef<HTMLDivElement>(null);
   const settings = getSettings();
 
   useEffect(() => {
@@ -208,6 +210,20 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsaved]);
 
+  // Handle outside clicks for summary info popover
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (summaryPopoverRef.current && !summaryPopoverRef.current.contains(e.target as Node)) {
+        setShowSummaryInfoPopover(false);
+      }
+    };
+
+    if (showSummaryInfoPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSummaryInfoPopover]);
+
   const handleToggleMeal = (meal: string) => {
     const updated = { ...collapsedMeals, [meal]: !collapsedMeals[meal] };
     setCollapsedMeals(updated);
@@ -239,6 +255,8 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const totalCarbs = sumNutrients(entries, 'carbs_g');
   const totalSatFat = sumNutrients(entries, 'sat_fat_g');
   const totalFibre = sumNutrients(entries, 'fibre_g');
+  const totalSugars = sumNutrients(entries, 'sugars_g');
+  const totalSalt = sumNutrients(entries, 'salt_g');
 
   return (
     <div className="flex flex-col bg-white dark:bg-gray-900">
@@ -323,30 +341,18 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
                   </div>
 
                   {/* Right: Per-meal totals (visible at all widths, compact on mobile) */}
-                  <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <div className="text-right">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                        {mealKcal.total === null ? '—' : mealKcal.total.toFixed(0)}
-                      </div>
-                      <div className="text-xs hidden sm:block">kcal</div>
+                  <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 text-gray-600 dark:text-gray-400 whitespace-nowrap text-xs sm:text-sm">
+                    <div>
+                      {mealKcal.total === null ? '—' : `${mealKcal.total.toFixed(0)} kcal`}
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                        {mealProtein.total === null ? '—' : mealProtein.total.toFixed(0)}
-                      </div>
-                      <div className="text-xs hidden sm:block">P</div>
+                    <div>
+                      P {mealProtein.total === null ? '—' : mealProtein.total.toFixed(0)}
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                        {mealFat.total === null ? '—' : mealFat.total.toFixed(0)}
-                      </div>
-                      <div className="text-xs hidden sm:block">F</div>
+                    <div>
+                      F {mealFat.total === null ? '—' : mealFat.total.toFixed(0)}
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                        {mealCarbs.total === null ? '—' : mealCarbs.total.toFixed(0)}
-                      </div>
-                      <div className="text-xs hidden sm:block">C</div>
+                    <div>
+                      C {mealCarbs.total === null ? '—' : mealCarbs.total.toFixed(0)}
                     </div>
                   </div>
                 </div>
@@ -406,59 +412,89 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-2 md:py-3">
-          {/* Nutrient metrics row - 6 equal-width cells */}
-          <div className="grid grid-cols-6 gap-2 mb-3">
-            {/* kcal cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">kcal</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
+          {/* Nutrient metrics row - 5 equal-width cells with info icon */}
+          <div className="flex items-start justify-between gap-2 mb-3">
+            {/* 5-cell grid */}
+            <div className="grid grid-cols-5 gap-2 flex-1">
+              {/* kcal cell */}
+              <div className="text-center">
+                <div className="text-xs text-gray-500 dark:text-gray-500">kcal</div>
+                <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                  {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
+                </div>
+                {totalKcal.total !== null && settings.calorieTarget > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                    {`${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}%`}
+                  </div>
+                )}
               </div>
-              {totalKcal.total !== null && settings.calorieTarget > 0 && (
-                <div className="text-xs text-gray-500 dark:text-gray-500">
-                  {`${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}%`}
+
+              {/* Protein cell */}
+              <div className="text-center">
+                <div className="text-xs text-gray-500 dark:text-gray-500">P</div>
+                <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                  {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
+                </div>
+              </div>
+
+              {/* Fat cell */}
+              <div className="text-center">
+                <div className="text-xs text-gray-500 dark:text-gray-500">F</div>
+                <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                  {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
+                </div>
+              </div>
+
+              {/* Carbs cell */}
+              <div className="text-center">
+                <div className="text-xs text-gray-500 dark:text-gray-500">C</div>
+                <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                  {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
+                </div>
+              </div>
+
+              {/* Sat. Fat cell */}
+              <div className="text-center">
+                <div className="text-xs text-gray-500 dark:text-gray-500">SF</div>
+                <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                  {totalSatFat.total === null ? '—' : totalSatFat.total.toFixed(1)}
+                </div>
+              </div>
+            </div>
+
+            {/* Info icon for all 8 nutrients popover */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowSummaryInfoPopover(!showSummaryInfoPopover)}
+                className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                aria-label="View all nutrients"
+                title="View all nutrients"
+              >
+                ⓘ
+              </button>
+              {/* Full nutrients popover */}
+              {showSummaryInfoPopover && (
+                <div
+                  ref={summaryPopoverRef}
+                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10 min-w-max"
+                >
+                  <div className="px-3 py-2 text-xs space-y-1">
+                    <div className="text-gray-900 dark:text-white font-semibold pb-1 border-b border-gray-200 dark:border-gray-700">
+                      Day totals
+                    </div>
+                    <div className="text-gray-700 dark:text-gray-300">
+                      <div>Calories: {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}</div>
+                      <div>Protein: {totalProtein.total === null ? '—' : `${totalProtein.total.toFixed(0)}g`}</div>
+                      <div>Fat: {totalFat.total === null ? '—' : `${totalFat.total.toFixed(0)}g`}</div>
+                      <div>Saturated fat: {totalSatFat.total === null ? '—' : `${totalSatFat.total.toFixed(1)}g`}</div>
+                      <div>Carbs: {totalCarbs.total === null ? '—' : `${totalCarbs.total.toFixed(0)}g`}</div>
+                      <div>Sugars: {totalSugars.total === null ? '—' : `${totalSugars.total.toFixed(1)}g`}</div>
+                      <div>Fibre: {totalFibre.total === null ? '—' : `${totalFibre.total.toFixed(1)}g`}</div>
+                      <div>Salt: {totalSalt.total === null ? '—' : `${totalSalt.total.toFixed(1)}g`}</div>
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
-
-            {/* Protein cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">P</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
-              </div>
-            </div>
-
-            {/* Fat cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">F</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
-              </div>
-            </div>
-
-            {/* Carbs cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">C</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
-              </div>
-            </div>
-
-            {/* Sat. Fat cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">SF</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalSatFat.total === null ? '—' : totalSatFat.total.toFixed(1)}
-              </div>
-            </div>
-
-            {/* Fibre cell */}
-            <div className="text-center">
-              <div className="text-xs text-gray-500 dark:text-gray-500">Fi</div>
-              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                {totalFibre.total === null ? '—' : totalFibre.total.toFixed(1)}
-              </div>
             </div>
           </div>
 
