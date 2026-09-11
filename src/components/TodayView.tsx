@@ -237,6 +237,9 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const totalProtein = sumNutrients(entries, 'protein_g');
   const totalFat = sumNutrients(entries, 'fat_g');
   const totalCarbs = sumNutrients(entries, 'carbs_g');
+  const totalSatFat = sumNutrients(entries, 'sat_fat_g');
+  const totalFibre = sumNutrients(entries, 'fibre_g');
+  const totalSalt = sumNutrients(entries, 'salt_g');
 
   return (
     <div className="flex flex-col bg-white dark:bg-gray-900">
@@ -404,7 +407,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-2 md:py-3">
-          {/* Main summary row */}
+          {/* Main summary row - Date and Kcal */}
           <div className="flex items-center justify-between gap-2 md:gap-4 mb-2">
             {/* Left: Date, Kcal + Target */}
             <div className="flex items-baseline gap-2 md:gap-3 flex-shrink-0 min-w-0">
@@ -421,25 +424,43 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
               </div>
             </div>
 
-            {/* Right: P/F/C compact figures */}
-            <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm flex-shrink-0">
+            {/* Right: All 6 macronutrients in compact grid */}
+            <div className="grid grid-cols-3 gap-2 md:gap-3 text-xs">
               <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">P</div>
                 <div className="font-medium text-gray-900 dark:text-white">
                   {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">P</div>
               </div>
               <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">F</div>
                 <div className="font-medium text-gray-900 dark:text-white">
                   {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">F</div>
               </div>
               <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">C</div>
                 <div className="font-medium text-gray-900 dark:text-white">
                   {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">C</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">SF</div>
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalSatFat.total === null ? '—' : totalSatFat.total.toFixed(1)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Fi</div>
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalFibre.total === null ? '—' : totalFibre.total.toFixed(1)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600 dark:text-gray-400">Sa</div>
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {totalSalt.total === null ? '—' : totalSalt.total.toFixed(1)}
+                </div>
               </div>
             </div>
           </div>

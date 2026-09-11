@@ -72,54 +72,56 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           </div>
         </div>
 
-        {/* Line 3 (Mobile): Compact nutrient line with inline labels */}
-        <div className="mt-2 flex flex-wrap items-baseline gap-1.5 text-xs sm:text-sm">
-          {/* kcal: prominent, no label */}
-          <span className="font-semibold text-gray-900 dark:text-white">
-            {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+        {/* Line 3 (Mobile): Compact nutrient line with horizontal scroll */}
+        <div className="mt-2 overflow-x-auto">
+          <div className="inline-flex items-baseline gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+            {/* kcal: prominent, no label */}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Protein */}
-          <span className="text-gray-500 dark:text-gray-400">P</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.protein_g === null ? '—' : entry.protein_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+            {/* Protein */}
+            <span className="text-gray-500 dark:text-gray-400">P</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.protein_g === null ? '—' : entry.protein_g.toFixed(1)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Fat */}
-          <span className="text-gray-500 dark:text-gray-400">F</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.fat_g === null ? '—' : entry.fat_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+            {/* Fat */}
+            <span className="text-gray-500 dark:text-gray-400">F</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.fat_g === null ? '—' : entry.fat_g.toFixed(1)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Carbs */}
-          <span className="text-gray-500 dark:text-gray-400">C</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.carbs_g === null ? '—' : entry.carbs_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+            {/* Carbs */}
+            <span className="text-gray-500 dark:text-gray-400">C</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.carbs_g === null ? '—' : entry.carbs_g.toFixed(1)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Salt */}
-          <span className="text-gray-500 dark:text-gray-400">Sa</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.salt_g === null ? '—' : entry.salt_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+            {/* Sat. Fat */}
+            <span className="text-gray-500 dark:text-gray-400">SF</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.sat_fat_g === null ? '—' : entry.sat_fat_g.toFixed(1)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Sat. Fat */}
-          <span className="text-gray-500 dark:text-gray-400">SF</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.sat_fat_g === null ? '—' : entry.sat_fat_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
+            {/* Fibre */}
+            <span className="text-gray-500 dark:text-gray-400">Fi</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.fibre_g === null ? '—' : entry.fibre_g.toFixed(1)}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500">·</span>
 
-          {/* Fibre */}
-          <span className="text-gray-500 dark:text-gray-400">Fi</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.fibre_g === null ? '—' : entry.fibre_g.toFixed(1)}
-          </span>
+            {/* Salt */}
+            <span className="text-gray-500 dark:text-gray-400">Sa</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {entry.salt_g === null ? '—' : entry.salt_g.toFixed(1)}
+            </span>
+          </div>
         </div>
       </div>
 
