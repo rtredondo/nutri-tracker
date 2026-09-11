@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits } from '../lib/storage';
 
 describe('TodayView - Data Loss Bug Protection', () => {
@@ -18,7 +18,7 @@ describe('TodayView - Data Loss Bug Protection', () => {
       // Setup: Create entries for today
       const date = '2026-08-12';
       const todayEntries = [
-        { meal: '1. Breakfast', food_id: '1', food_name: 'egg', qty: 100, unit: 'g' }
+        { meal: '1. Breakfast', food_id: '1', food_name: 'egg', qty: 100, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null }
       ];
 
       cacheDayEdits(date, todayEntries);
@@ -39,9 +39,9 @@ describe('TodayView - Data Loss Bug Protection', () => {
       const date2 = '2026-08-12'; // today
       const date3 = '2026-08-14'; // future
 
-      const entries1 = [{ meal: '1. Breakfast', food_id: '1', food_name: 'apple', qty: 100, unit: 'g' }];
-      const entries2 = [{ meal: '1. Breakfast', food_id: '2', food_name: 'banana', qty: 100, unit: 'g' }];
-      const entries3 = [{ meal: '1. Breakfast', food_id: '3', food_name: 'cherry', qty: 100, unit: 'g' }];
+      const entries1 = [{ meal: '1. Breakfast', food_id: '1', food_name: 'apple', qty: 100, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null }];
+      const entries2 = [{ meal: '1. Breakfast', food_id: '2', food_name: 'banana', qty: 100, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null }];
+      const entries3 = [{ meal: '1. Breakfast', food_id: '3', food_name: 'cherry', qty: 100, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null }];
 
       cacheDayEdits(date1, entries1);
       cacheDayEdits(date2, entries2);
@@ -65,8 +65,8 @@ describe('TodayView - Data Loss Bug Protection', () => {
 
       const yesterday = '2026-08-11';
       const savedEntries = [
-        { meal: '1. Breakfast', food_id: '1', food_name: 'rice', qty: 150, unit: 'g' },
-        { meal: '2. Almoço', food_id: '2', food_name: 'chicken', qty: 120, unit: 'g' },
+        { meal: '1. Breakfast', food_id: '1', food_name: 'rice', qty: 150, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null },
+        { meal: '2. Almoço', food_id: '2', food_name: 'chicken', qty: 120, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null },
       ];
 
       // Cache represents previously saved entries (as they would be in localStorage)
@@ -88,7 +88,7 @@ describe('TodayView - Data Loss Bug Protection', () => {
 
       const today = '2026-08-12';
       const userLoggedEntries = [
-        { meal: '1. Breakfast', food_id: '10', food_name: 'oatmeal', qty: 50, unit: 'g' },
+        { meal: '1. Breakfast', food_id: '10', food_name: 'oatmeal', qty: 50, unit: 'g', kcal: null, protein_g: null, fat_g: null, sat_fat_g: null, carbs_g: null, sugars_g: null, fibre_g: null, salt_g: null },
       ];
 
       cacheDayEdits(today, userLoggedEntries);

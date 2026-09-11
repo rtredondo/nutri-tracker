@@ -239,7 +239,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const totalCarbs = sumNutrients(entries, 'carbs_g');
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-white dark:bg-gray-900">
+    <div className="flex flex-col bg-white dark:bg-gray-900">
       <div className="flex-1 space-y-8 px-4 py-8 pb-56 max-w-4xl mx-auto w-full">
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-4">
@@ -397,7 +397,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
       </div>
 
       {/* Fixed Summary Footer - Compact */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 shadow-lg pb-[env(safe-area-inset-bottom)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 shadow-lg pb-[env(safe-area-inset-bottom)]" style={{ transform: 'translateZ(0)' }}>
         {/* Progress bar at top */}
         <div className="h-1 bg-gray-200 dark:bg-gray-700 overflow-hidden">
           <div
