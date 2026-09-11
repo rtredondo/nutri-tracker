@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { LogEntry, Food } from '../lib/nutrients';
-import { PRIMARY_NUTRIENTS } from '../lib/nutrients';
 import { getCategoryColors } from '../lib/categories';
 import FoodPicker from './FoodPicker';
 
@@ -73,14 +72,56 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           </div>
         </div>
 
-        {/* Line 3 (Mobile): Nutrients grid */}
-        <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 dark:text-gray-400">
-          {PRIMARY_NUTRIENTS.map((nutrient) => (
-            <div key={nutrient}>
-              {nutrient === 'kcal' ? entry.kcal === null ? '—' : entry.kcal.toFixed(0) : entry[nutrient] === null ? '—' : entry[nutrient].toFixed(1)}{' '}
-              {nutrient === 'kcal' ? '' : 'g'}
+        {/* Line 3 (Mobile): Nutrients display with self-labels */}
+        {/* Row 1: kcal (isolated, prominent) */}
+        <div className="mt-2 mb-3">
+          <div className="text-lg font-semibold text-gray-900 dark:text-white">
+            {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}
+          </div>
+        </div>
+
+        {/* Row 2: Protein, Fat, Carbs */}
+        <div className="grid grid-cols-3 gap-3 mb-2">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Protein</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.protein_g === null ? '—' : `${entry.protein_g.toFixed(1)}g`}
             </div>
-          ))}
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Fat</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.fat_g === null ? '—' : `${entry.fat_g.toFixed(1)}g`}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Carbs</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.carbs_g === null ? '—' : `${entry.carbs_g.toFixed(1)}g`}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Salt, Sat. Fat, Fibre */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Salt</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.salt_g === null ? '—' : `${entry.salt_g.toFixed(1)}g`}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Sat. Fat</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.sat_fat_g === null ? '—' : `${entry.sat_fat_g.toFixed(1)}g`}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 dark:text-gray-500 mb-1">Fibre</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {entry.fibre_g === null ? '—' : `${entry.fibre_g.toFixed(1)}g`}
+            </div>
+          </div>
         </div>
       </div>
 
