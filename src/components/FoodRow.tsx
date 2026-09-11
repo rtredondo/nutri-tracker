@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { LogEntry, Food } from '../lib/nutrients';
 import { getCategoryColors } from '../lib/categories';
 import FoodPicker from './FoodPicker';
@@ -14,16 +14,65 @@ interface FoodRowProps {
 
 export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwap, allFoods }: FoodRowProps) {
   const [showSwapPicker, setShowSwapPicker] = useState(false);
+  const [showInfoPopover, setShowInfoPopover] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const categoryColors = getCategoryColors(food.category);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setShowInfoPopover(false);
+      }
+    };
+
+    if (showInfoPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showInfoPopover]);
 
   return (
     <>
       <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
         {/* Mobile: stacked layout below sm, Desktop: single line */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-          {/* Line 1 (Mobile): Full food name, no truncation */}
-          <div className="flex-1 min-w-0 mb-2 sm:mb-0">
+          {/* Line 1 (Mobile): Full food name with info icon, no truncation */}
+          <div className="flex-1 min-w-0 mb-2 sm:mb-0 flex items-start justify-between gap-2">
             <p className="font-medium text-gray-900 dark:text-white break-words">{entry.food_name}</p>
+            {/* Info icon button */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowInfoPopover(!showInfoPopover)}
+                className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                aria-label="Nutrient details"
+                title="View all nutrients"
+              >
+                ⓘ
+              </button>
+              {/* Nutrient details popover */}
+              {showInfoPopover && (
+                <div
+                  ref={popoverRef}
+                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10 min-w-max"
+                >
+                  <div className="px-3 py-2 text-xs space-y-1">
+                    <div className="text-gray-900 dark:text-white font-semibold pb-1 border-b border-gray-200 dark:border-gray-700">
+                      {entry.food_name}
+                    </div>
+                    <div className="text-gray-700 dark:text-gray-300">
+                      <div>Calories: {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}</div>
+                      <div>Protein: {entry.protein_g === null ? '—' : `${entry.protein_g.toFixed(1)}g`}</div>
+                      <div>Fat: {entry.fat_g === null ? '—' : `${entry.fat_g.toFixed(1)}g`}</div>
+                      <div>Saturated fat: {entry.sat_fat_g === null ? '—' : `${entry.sat_fat_g.toFixed(1)}g`}</div>
+                      <div>Carbs: {entry.carbs_g === null ? '—' : `${entry.carbs_g.toFixed(1)}g`}</div>
+                      <div>Sugars: {entry.sugars_g === null ? '—' : `${entry.sugars_g.toFixed(1)}g`}</div>
+                      <div>Fibre: {entry.fibre_g === null ? '—' : `${entry.fibre_g.toFixed(1)}g`}</div>
+                      <div>Salt: {entry.salt_g === null ? '—' : `${entry.salt_g.toFixed(1)}g`}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Line 2 (Mobile): Category pill + Quantity input + Actions */}
@@ -72,7 +121,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           </div>
         </div>
 
-        {/* Line 3 (Mobile): Compact nutrient line */}
+        {/* Line 3 (Mobile): Compact nutrient line - 5 values only */}
         <div className="mt-2 flex flex-wrap items-baseline gap-1.5 text-xs sm:text-sm">
           {/* kcal: prominent, no label */}
           <span className="font-semibold text-gray-900 dark:text-white">
@@ -105,13 +154,6 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           <span className="text-gray-500 dark:text-gray-400">SF</span>
           <span className="font-medium text-gray-900 dark:text-white">
             {entry.sat_fat_g === null ? '—' : entry.sat_fat_g.toFixed(1)}
-          </span>
-          <span className="text-gray-400 dark:text-gray-500">·</span>
-
-          {/* Fibre */}
-          <span className="text-gray-500 dark:text-gray-400">Fi</span>
-          <span className="font-medium text-gray-900 dark:text-white">
-            {entry.fibre_g === null ? '—' : entry.fibre_g.toFixed(1)}
           </span>
         </div>
       </div>
