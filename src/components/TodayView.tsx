@@ -239,7 +239,6 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
   const totalCarbs = sumNutrients(entries, 'carbs_g');
   const totalSatFat = sumNutrients(entries, 'sat_fat_g');
   const totalFibre = sumNutrients(entries, 'fibre_g');
-  const totalSalt = sumNutrients(entries, 'salt_g');
 
   return (
     <div className="flex flex-col bg-white dark:bg-gray-900">
@@ -407,106 +406,112 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 py-2 md:py-3">
-          {/* Main summary row - Date and Kcal */}
-          <div className="flex items-center justify-between gap-2 md:gap-4 mb-2">
-            {/* Left: Date, Kcal + Target */}
-            <div className="flex items-baseline gap-2 md:gap-3 flex-shrink-0 min-w-0">
-              <div className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
-                {new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-              </div>
-              <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+          {/* Nutrient metrics row - 6 equal-width cells */}
+          <div className="grid grid-cols-6 gap-2 mb-3">
+            {/* kcal cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">kcal</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
                 {totalKcal.total === null ? '—' : totalKcal.total.toFixed(0)}
               </div>
-              <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                {totalKcal.total !== null && settings.calorieTarget > 0
-                  ? `${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}%`
-                  : ''}
-              </div>
-            </div>
-
-            {/* Right: All 6 macronutrients in compact grid */}
-            <div className="grid grid-cols-3 gap-2 md:gap-3 text-xs">
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">P</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
+              {totalKcal.total !== null && settings.calorieTarget > 0 && (
+                <div className="text-xs text-gray-500 dark:text-gray-500">
+                  {`${((totalKcal.total / settings.calorieTarget) * 100).toFixed(0)}%`}
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">F</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">C</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">SF</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalSatFat.total === null ? '—' : totalSatFat.total.toFixed(1)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">Fi</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalFibre.total === null ? '—' : totalFibre.total.toFixed(1)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600 dark:text-gray-400">Sa</div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {totalSalt.total === null ? '—' : totalSalt.total.toFixed(1)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action buttons row */}
-          <div className="flex items-center justify-between gap-1.5 md:gap-2 text-xs md:text-sm">
-            {/* Save button - primary action */}
-            <button
-              onClick={handleSave}
-              disabled={!hasUnsaved || saveLoading}
-              className={`px-4 py-2.5 md:px-5 md:py-3 rounded font-semibold whitespace-nowrap transition flex items-center justify-center gap-2 flex-shrink-0 min-h-11 md:min-h-12 text-sm md:text-base ${
-                saveError
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : saveSucessMessage
-                    ? 'bg-green-600 text-white'
-                    : hasUnsaved && !saveLoading
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {saveLoading && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
               )}
-              <span>
-                {saveLoading ? 'Saving…' : saveSucessMessage ? '✓ Saved' : saveError ? 'Save failed' : (hasUnsaved ? 'Save' : 'Saved')}
-              </span>
-            </button>
+            </div>
 
-            {/* Status message if error */}
-            {saveError && !saveLoading && (
-              <div className="text-red-600 dark:text-red-400 font-medium flex-1 min-w-0 truncate text-xs">
-                Tap to retry
+            {/* Protein cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">P</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                {totalProtein.total === null ? '—' : totalProtein.total.toFixed(0)}
               </div>
-            )}
+            </div>
 
-            {/* Reset button - secondary action */}
-            <button
-              onClick={handleResetToDefault}
-              className="px-2 md:px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap transition flex-shrink-0"
-            >
-              Reset
-            </button>
+            {/* Fat cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">F</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                {totalFat.total === null ? '—' : totalFat.total.toFixed(0)}
+              </div>
+            </div>
+
+            {/* Carbs cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">C</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                {totalCarbs.total === null ? '—' : totalCarbs.total.toFixed(0)}
+              </div>
+            </div>
+
+            {/* Sat. Fat cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">SF</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                {totalSatFat.total === null ? '—' : totalSatFat.total.toFixed(1)}
+              </div>
+            </div>
+
+            {/* Fibre cell */}
+            <div className="text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-500">Fi</div>
+              <div className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                {totalFibre.total === null ? '—' : totalFibre.total.toFixed(1)}
+              </div>
+            </div>
           </div>
+
+          {/* Action buttons row - Date on left, Save (primary) on left, Reset on right */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Date */}
+            <div className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap">
+              {new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+            </div>
+
+            {/* Right: Save and Reset buttons */}
+            <div className="flex items-center gap-1.5 md:gap-2">
+              {/* Save button - primary action, now on the LEFT */}
+              <button
+                onClick={handleSave}
+                disabled={!hasUnsaved || saveLoading}
+                className={`px-3 md:px-4 py-1.5 md:py-2 rounded font-semibold whitespace-nowrap transition flex items-center justify-center gap-2 flex-shrink-0 text-xs md:text-sm ${
+                  saveError
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : saveSucessMessage
+                      ? 'bg-green-600 text-white'
+                      : hasUnsaved && !saveLoading
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {saveLoading && (
+                  <svg className="animate-spin h-3 w-3 md:h-4 md:w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                <span>
+                  {saveLoading ? 'Saving…' : saveSucessMessage ? '✓ Saved' : saveError ? 'Save failed' : (hasUnsaved ? 'Save' : 'Saved')}
+                </span>
+              </button>
+
+              {/* Reset button - secondary action, on the RIGHT */}
+              <button
+                onClick={handleResetToDefault}
+                className="px-2 md:px-3 py-1 md:py-1.5 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap transition flex-shrink-0 text-xs md:text-sm"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Status message if error */}
+          {saveError && !saveLoading && (
+            <div className="text-red-600 dark:text-red-400 font-medium text-xs mt-1">
+              Tap to retry
+            </div>
+          )}
         </div>
       </div>
 
