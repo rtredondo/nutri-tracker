@@ -207,7 +207,7 @@ export default function FoodPicker({
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onTouchStart={(e) => e.stopPropagation()}
                                     inputMode="decimal"
-                                    className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                                    className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-base"
                                     aria-label="Quantity"
                                   />
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -256,7 +256,7 @@ export default function FoodPicker({
                               onMouseDown={(e) => e.stopPropagation()}
                               onTouchStart={(e) => e.stopPropagation()}
                               inputMode="decimal"
-                              className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                              className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-base"
                               aria-label="Quantity"
                             />
                             <span className="text-xs text-gray-500 dark:text-gray-400">
