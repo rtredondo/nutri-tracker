@@ -37,8 +37,8 @@ export default function FoodPicker({
 
   const filtered = useMemo(() => {
     return foods.filter((f) => {
-      const matchesSearch = f.food_name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || f.category === selectedCategory;
+      const matchesSearch = f.food_name ? f.food_name.toLowerCase().includes(search.toLowerCase()) : !search;
+      const matchesCategory = selectedCategory === 'All' || (f.category ? f.category === selectedCategory : false);
       const notExcluded = !excludeFoodId || f.food_id !== excludeFoodId;
       return matchesSearch && matchesCategory && notExcluded;
     });
@@ -47,10 +47,11 @@ export default function FoodPicker({
   const groupedByCategory = useMemo(() => {
     const grouped: Record<string, Food[]> = {};
     filtered.forEach((food) => {
-      if (!grouped[food.category]) {
-        grouped[food.category] = [];
+      const category = food.category || '(Unknown)';
+      if (!grouped[category]) {
+        grouped[category] = [];
       }
-      grouped[food.category].push(food);
+      grouped[category].push(food);
     });
     return grouped;
   }, [filtered]);
