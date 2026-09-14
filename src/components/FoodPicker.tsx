@@ -201,7 +201,7 @@ export default function FoodPicker({
                                     type="number"
                                     step="0.1"
                                     min="0"
-                                    value={selectedQuantities.get(food.food_id) || coerceBasisQty(food)}
+                                    value={selectedQuantities.get(food.food_id) ?? coerceBasisQty(food)}
                                     onChange={(e) => handleQuantityChange(food.food_id, parseFloat(e.target.value) || 0)}
                                     inputMode="decimal"
                                     className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
@@ -247,7 +247,7 @@ export default function FoodPicker({
                               type="number"
                               step="0.1"
                               min="0"
-                              value={selectedQuantities.get(food.food_id) || coerceBasisQty(food)}
+                              value={selectedQuantities.get(food.food_id) ?? coerceBasisQty(food)}
                               onChange={(e) => handleQuantityChange(food.food_id, parseFloat(e.target.value) || 0)}
                               inputMode="decimal"
                               className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
