@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import type { Food } from '../lib/nutrients';
+import { coerceBasisQty } from '../lib/nutrients';
 import { getCategoryColors, getAllCategories } from '../lib/categories';
 
 interface FoodPickerProps {
   foods: Food[];
   onSelect?: (food: Food) => void;
   onSelectMultiple?: (foods: Food[]) => void;
+  onSelectMultipleWithQuantities?: (foods: Food[], quantities: Map<string, number>) => void;
   onClose: () => void;
   filterCategory?: string;
   excludeFoodId?: string;
@@ -17,6 +19,7 @@ export default function FoodPicker({
   foods,
   onSelect,
   onSelectMultiple,
+  onSelectMultipleWithQuantities,
   onClose,
   filterCategory,
   excludeFoodId,
@@ -26,6 +29,7 @@ export default function FoodPicker({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(filterCategory || 'All');
   const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
+  const [selectedQuantities, setSelectedQuantities] = useState<Map<string, number>>(new Map());
 
   const allCategories = useMemo(() => {
     return getAllCategories();
@@ -63,20 +67,35 @@ export default function FoodPicker({
     } else {
       // Multi-select mode
       const newSelected = new Set(selectedFoods);
+      const newQuantities = new Map(selectedQuantities);
       if (newSelected.has(food.food_id)) {
         newSelected.delete(food.food_id);
+        newQuantities.delete(food.food_id);
       } else {
         newSelected.add(food.food_id);
+        newQuantities.set(food.food_id, coerceBasisQty(food));
       }
       setSelectedFoods(newSelected);
+      setSelectedQuantities(newQuantities);
     }
   };
 
+  const handleQuantityChange = (foodId: string, qty: number) => {
+    const newQuantities = new Map(selectedQuantities);
+    newQuantities.set(foodId, Math.max(0, qty));
+    setSelectedQuantities(newQuantities);
+  };
+
   const handleDone = () => {
-    if (onSelectMultiple && selectedFoods.size > 0) {
+    if (selectedFoods.size > 0) {
       const selectedFoodObjects = foods.filter((f) => selectedFoods.has(f.food_id));
-      onSelectMultiple(selectedFoodObjects);
+      if (onSelectMultipleWithQuantities) {
+        onSelectMultipleWithQuantities(selectedFoodObjects, selectedQuantities);
+      } else if (onSelectMultiple) {
+        onSelectMultiple(selectedFoodObjects);
+      }
       setSelectedFoods(new Set());
+      setSelectedQuantities(new Map());
       onClose();
     }
   };
@@ -176,6 +195,23 @@ export default function FoodPicker({
                                 {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
                                 {food.basis_unit}
                               </p>
+                              {selectedFoods.has(food.food_id) && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={selectedQuantities.get(food.food_id) || coerceBasisQty(food)}
+                                    onChange={(e) => handleQuantityChange(food.food_id, parseFloat(e.target.value) || 0)}
+                                    inputMode="decimal"
+                                    className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                                    aria-label="Quantity"
+                                  />
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {food.basis_unit}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </button>
                         ))}
@@ -205,6 +241,23 @@ export default function FoodPicker({
                           {food.kcal === null ? '?' : food.kcal.toFixed(0)} kcal/{food.basis_qty}
                           {food.basis_unit}
                         </p>
+                        {selectedFoods.has(food.food_id) && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={selectedQuantities.get(food.food_id) || coerceBasisQty(food)}
+                              onChange={(e) => handleQuantityChange(food.food_id, parseFloat(e.target.value) || 0)}
+                              inputMode="decimal"
+                              className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                              aria-label="Quantity"
+                            />
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {food.basis_unit}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </button>
                   ))}

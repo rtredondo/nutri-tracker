@@ -45,16 +45,20 @@ export function coerceNutrient(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+export function coerceBasisQty(food: Food): number {
+  const coerced = coerceNutrient(food.basis_qty);
+  if (coerced === null || coerced === 0) {
+    return 100;
+  }
+  return coerced;
+}
+
 export function computeNutrient(food: Food, nutrient: Nutrient, quantity: number): number | null {
   const baseValue = food[nutrient];
   const coerced = coerceNutrient(baseValue);
   if (coerced === null) return null;
 
-  let basisQty = coerceNutrient(food.basis_qty);
-  if (basisQty === null || basisQty === 0) {
-    basisQty = 100;
-  }
-
+  const basisQty = coerceBasisQty(food);
   return (coerced * quantity) / basisQty;
 }
 

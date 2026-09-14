@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Food, LogEntry } from '../lib/nutrients';
-import { sumNutrients } from '../lib/nutrients';
+import { sumNutrients, coerceBasisQty } from '../lib/nutrients';
 import { fetchLogs, saveDay } from '../lib/api';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
@@ -100,11 +100,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setSaveError(null);
   };
 
-  const createLogEntry = (food: Food, meal: string): LogEntry => ({
+  const createLogEntry = (food: Food, meal: string, qty?: number): LogEntry => ({
     meal,
     food_id: food.food_id,
     food_name: food.food_name,
-    qty: 100,
+    qty: qty ?? coerceBasisQty(food),
     unit: food.basis_unit,
     kcal: food.kcal,
     protein_g: food.protein_g,
@@ -126,8 +126,11 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setSaveError(null);
   };
 
-  const handleAddMultipleFoods = (selectedFoods: Food[], meal: string) => {
-    const newEntries = selectedFoods.map((food) => createLogEntry(food, meal));
+  const handleAddMultipleFoods = (selectedFoods: Food[], meal: string, quantities?: Map<string, number>) => {
+    const newEntries = selectedFoods.map((food) => {
+      const qty = quantities?.get(food.food_id);
+      return createLogEntry(food, meal, qty);
+    });
     const updated = [...entries, ...newEntries];
     setEntries(updated);
     cacheDayEdits(date, updated);
@@ -556,7 +559,7 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
         <FoodPicker
           foods={foods}
           onSelect={(food) => handleAddFood(food, showFoodPicker)}
-          onSelectMultiple={(foods) => handleAddMultipleFoods(foods, showFoodPicker)}
+          onSelectMultipleWithQuantities={(foods, quantities) => handleAddMultipleFoods(foods, showFoodPicker, quantities)}
           onClose={() => setShowFoodPicker(null)}
         />
       )}
