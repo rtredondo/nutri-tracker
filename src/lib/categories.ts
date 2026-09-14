@@ -5,7 +5,7 @@ export interface CategoryColors {
 }
 
 const CATEGORY_MAP: Record<string, CategoryColors> = {
-  Bebida: {
+  Drink: {
     bg: 'bg-slate-100 dark:bg-slate-900',
     text: 'text-slate-800 dark:text-slate-200',
     pill: 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200',
@@ -45,12 +45,12 @@ const CATEGORY_MAP: Record<string, CategoryColors> = {
     text: 'text-red-800 dark:text-red-200',
     pill: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
   },
-  'Queijo e CIA': {
+  Dairy: {
     bg: 'bg-sky-100 dark:bg-sky-900',
     text: 'text-sky-800 dark:text-sky-200',
     pill: 'bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200',
   },
-  Tempero: {
+  Seasoning: {
     bg: 'bg-violet-100 dark:bg-violet-900',
     text: 'text-violet-800 dark:text-violet-200',
     pill: 'bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200',
