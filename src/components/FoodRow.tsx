@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { LogEntry, Food } from '../lib/nutrients';
 import { getCategoryColors } from '../lib/categories';
+import { usePopoverPosition } from '../lib/usePopoverPosition';
 import FoodPicker from './FoodPicker';
 
 interface FoodRowProps {
@@ -15,12 +17,15 @@ interface FoodRowProps {
 export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwap, allFoods }: FoodRowProps) {
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   const [showInfoPopover, setShowInfoPopover] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const categoryColors = getCategoryColors(food.category);
+  const popoverPosition = usePopoverPosition({ anchorRef: buttonRef as React.RefObject<HTMLElement>, isOpen: showInfoPopover, popoverHeight: 210 });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
         setShowInfoPopover(false);
       }
     };
@@ -40,8 +45,9 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
           <div className="flex-1 min-w-0 mb-2 sm:mb-0 flex items-start justify-between gap-2">
             <p className="font-medium text-gray-900 dark:text-white break-words">{entry.food_name}</p>
             {/* Info icon button */}
-            <div className="relative flex-shrink-0">
+            <div className="flex-shrink-0">
               <button
+                ref={buttonRef}
                 onClick={() => setShowInfoPopover(!showInfoPopover)}
                 className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                 aria-label="Nutrient details"
@@ -49,30 +55,35 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
               >
                 ⓘ
               </button>
-              {/* Nutrient details popover */}
-              {showInfoPopover && (
-                <div
-                  ref={popoverRef}
-                  className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10 min-w-max"
-                >
-                  <div className="px-3 py-2 text-xs space-y-1">
-                    <div className="text-gray-900 dark:text-white font-semibold pb-1 border-b border-gray-200 dark:border-gray-700">
-                      {entry.food_name}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      <div>Calories: {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}</div>
-                      <div>Protein: {entry.protein_g === null ? '—' : `${entry.protein_g.toFixed(1)}g`}</div>
-                      <div>Fat: {entry.fat_g === null ? '—' : `${entry.fat_g.toFixed(1)}g`}</div>
-                      <div>Saturated fat: {entry.sat_fat_g === null ? '—' : `${entry.sat_fat_g.toFixed(1)}g`}</div>
-                      <div>Carbs: {entry.carbs_g === null ? '—' : `${entry.carbs_g.toFixed(1)}g`}</div>
-                      <div>Sugars: {entry.sugars_g === null ? '—' : `${entry.sugars_g.toFixed(1)}g`}</div>
-                      <div>Fibre: {entry.fibre_g === null ? '—' : `${entry.fibre_g.toFixed(1)}g`}</div>
-                      <div>Salt: {entry.salt_g === null ? '—' : `${entry.salt_g.toFixed(1)}g`}</div>
-                    </div>
+            </div>
+            {/* Nutrient details popover - rendered to portal for proper positioning */}
+            {showInfoPopover && popoverPosition && createPortal(
+              <div
+                ref={popoverRef}
+                className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 min-w-max"
+                style={{
+                  top: `${popoverPosition.top}px`,
+                  left: `${popoverPosition.left}px`,
+                }}
+              >
+                <div className="px-3 py-2 text-xs space-y-1">
+                  <div className="text-gray-900 dark:text-white font-semibold pb-1 border-b border-gray-200 dark:border-gray-700">
+                    {entry.food_name}
+                  </div>
+                  <div className="text-gray-700 dark:text-gray-300">
+                    <div>Calories: {entry.kcal === null ? '—' : entry.kcal.toFixed(0)}</div>
+                    <div>Protein: {entry.protein_g === null ? '—' : `${entry.protein_g.toFixed(1)}g`}</div>
+                    <div>Fat: {entry.fat_g === null ? '—' : `${entry.fat_g.toFixed(1)}g`}</div>
+                    <div>Saturated fat: {entry.sat_fat_g === null ? '—' : `${entry.sat_fat_g.toFixed(1)}g`}</div>
+                    <div>Carbs: {entry.carbs_g === null ? '—' : `${entry.carbs_g.toFixed(1)}g`}</div>
+                    <div>Sugars: {entry.sugars_g === null ? '—' : `${entry.sugars_g.toFixed(1)}g`}</div>
+                    <div>Fibre: {entry.fibre_g === null ? '—' : `${entry.fibre_g.toFixed(1)}g`}</div>
+                    <div>Salt: {entry.salt_g === null ? '—' : `${entry.salt_g.toFixed(1)}g`}</div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>,
+              document.body
+            )}
           </div>
 
           {/* Line 2 (Mobile): Category pill + Quantity input + Actions */}
