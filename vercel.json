@@ -3,6 +3,10 @@
     "api/sheet.ts": {
       "memory": 128,
       "maxDuration": 10
+    },
+    "api/db-test.ts": {
+      "memory": 128,
+      "maxDuration": 10
     }
   }
 }
