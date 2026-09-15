@@ -70,6 +70,52 @@ function stripMealPrefix(meal: string): string {
   return meal.replace(/^\d+\.\s*/, '');
 }
 
+// Diagnostic helper to analyze string for hidden characters
+function analyzeString(s: string): { length: number; json: string; codes: number[] } {
+  return {
+    length: s.length,
+    json: JSON.stringify(s),
+    codes: Array.from(s).map((c) => c.charCodeAt(0)),
+  };
+}
+
+// Diagnostic helper to find near-duplicate categories
+function findNearDuplicates(categories: string[]): { duplicates: Array<[string, string]>; analysis: Record<string, unknown> } {
+  const duplicates: Array<[string, string]> = [];
+  const analysis: Record<string, unknown> = {};
+
+  for (let i = 0; i < categories.length; i++) {
+    for (let j = i + 1; j < categories.length; j++) {
+      const a = categories[i];
+      const b = categories[j];
+
+      // Check for various near-duplicates
+      if (a !== b) {
+        const aTrimmed = a.trim();
+        const bTrimmed = b.trim();
+        const aLower = a.toLowerCase();
+        const bLower = b.toLowerCase();
+
+        if (aTrimmed === bTrimmed || aLower === bLower) {
+          duplicates.push([a, b]);
+          analysis[`comparison_${i}_${j}`] = {
+            a,
+            b,
+            a_trimmed: aTrimmed,
+            b_trimmed: bTrimmed,
+            a_lower: aLower,
+            b_lower: bLower,
+            a_analysis: analyzeString(a),
+            b_analysis: analyzeString(b),
+          };
+        }
+      }
+    }
+  }
+
+  return { duplicates, analysis };
+}
+
 async function fetchAppsScriptData(
   action: string,
   appsScriptUrl: string,
@@ -178,12 +224,39 @@ export default async function handler(
     const uniqueCategories = [...new Set(baseData.foods.map((f) => f.category))];
     const categoryToFoodTypeId: Record<string, number> = {};
 
+    // DIAGNOSTIC: Log category analysis to diagnose duplicate constraint errors
+    const diagnosticMode = req.query.diagnostic === 'true';
+    if (diagnosticMode) {
+      const nearDups = findNearDuplicates(uniqueCategories);
+      console.log('[MIGRATION DIAGNOSTIC] uniqueCategories:', {
+        count: uniqueCategories.length,
+        categories: uniqueCategories.map((c) => analyzeString(c)),
+        nearDuplicates: nearDups.duplicates,
+        analysis: nearDups.analysis,
+        setSize: new Set(baseData.foods.map((f) => f.category)).size,
+        arraySize: baseData.foods.map((f) => f.category).length,
+      });
+      res.status(200).json({
+        diagnostic: true,
+        uniqueCategories: uniqueCategories.map((c) => analyzeString(c)),
+        nearDuplicates: nearDups,
+      });
+      return;
+    }
+
     // Start transaction
     await client.query('BEGIN');
 
     try {
+      // Track food_types insert invocation (should only happen once per request)
+      let foodTypesInsertInvocations = 0;
+
       // Insert food_types (small number, individual queries fine)
       for (const category of uniqueCategories) {
+        foodTypesInsertInvocations++;
+        if (foodTypesInsertInvocations > uniqueCategories.length) {
+          throw new Error(`DIAGNOSTIC ERROR: food_types loop invoked more times (${foodTypesInsertInvocations}) than categories (${uniqueCategories.length})`);
+        }
         const color = CATEGORY_COLORS[category] || 'gray';
         const result = await client.query(
           'INSERT INTO food_types (name, color) VALUES ($1, $2) RETURNING id',
