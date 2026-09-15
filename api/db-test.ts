@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 
 export default async function handler(
   req: VercelRequest,
@@ -16,6 +16,7 @@ export default async function handler(
   }
 
   try {
+    const sql = neon(databaseUrl);
     const result = await sql`SELECT NOW()`;
     res.status(200).json({
       ok: true,
