@@ -56,6 +56,8 @@ const MEALS = [
   { sort_order: 5, name: 'Colação' },
 ];
 
+const BATCH_SIZE = 300;
+
 function stripMealPrefix(meal: string): string {
   return meal.replace(/^\d+\.\s*/, '');
 }
@@ -172,7 +174,7 @@ export default async function handler(
     await client.query('BEGIN');
 
     try {
-      // Insert food_types
+      // Insert food_types (small number, individual queries fine)
       for (const category of uniqueCategories) {
         const color = CATEGORY_COLORS[category] || 'gray';
         const result = await client.query(
@@ -185,7 +187,7 @@ export default async function handler(
         }
       }
 
-      // Insert meals
+      // Insert meals (fixed 5, individual queries fine)
       for (const meal of MEALS) {
         await client.query('INSERT INTO meals (name, sort_order) VALUES ($1, $2)', [
           meal.name,
@@ -206,32 +208,26 @@ export default async function handler(
         throw new Error('Failed to create user');
       }
 
-      // Build old→new food_id mapping and insert foods
-      const oldFoodIdToNewId: Record<string, number> = {};
-      for (const food of baseData.foods) {
-        const foodTypeId = categoryToFoodTypeId[food.category];
-        if (!foodTypeId) {
-          throw new Error(`No food_type_id found for category: ${food.category}`);
-        }
+      // Batch insert foods
+      for (let i = 0; i < baseData.foods.length; i += BATCH_SIZE) {
+        const batch = baseData.foods.slice(i, i + BATCH_SIZE);
+        const valuesClauses: string[] = [];
+        const params: unknown[] = [];
 
-        const result = await client.query(
-          `INSERT INTO foods (
-            name,
-            food_type_id,
-            basis_qty,
-            basis_unit,
-            source,
-            kcal,
-            protein_g,
-            fat_g,
-            sat_fat_g,
-            carbs_g,
-            sugars_g,
-            fibre_g,
-            salt_g
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          RETURNING id`,
-          [
+        batch.forEach((food, idx) => {
+          const foodTypeId = categoryToFoodTypeId[food.category];
+          if (!foodTypeId) {
+            throw new Error(`No food_type_id found for category: ${food.category}`);
+          }
+
+          const paramOffset = idx * 13 + 1;
+          valuesClauses.push(
+            `($${paramOffset}, $${paramOffset + 1}, $${paramOffset + 2}, $${paramOffset + 3}, $${paramOffset + 4}, ` +
+              `$${paramOffset + 5}, $${paramOffset + 6}, $${paramOffset + 7}, $${paramOffset + 8}, $${paramOffset + 9}, ` +
+              `$${paramOffset + 10}, $${paramOffset + 11}, $${paramOffset + 12})`,
+          );
+
+          params.push(
             food.food_name,
             foodTypeId,
             food.basis_qty,
@@ -245,13 +241,16 @@ export default async function handler(
             food.sugars_g,
             food.fibre_g,
             food.salt_g,
-          ],
-        );
+          );
+        });
 
-        if (result.rows.length > 0) {
-          oldFoodIdToNewId[food.food_id] = result.rows[0].id;
-          counts.foods++;
-        }
+        const query = `INSERT INTO foods (
+          name, food_type_id, basis_qty, basis_unit, source, kcal, protein_g,
+          fat_g, sat_fat_g, carbs_g, sugars_g, fibre_g, salt_g
+        ) VALUES ${valuesClauses.join(', ')}`;
+
+        const result = await client.query(query, params);
+        counts.foods += result.rowCount || 0;
       }
 
       // Get meal name→meal_id mapping
@@ -261,71 +260,77 @@ export default async function handler(
         mealNameToId[meal.name] = meal.id;
       }
 
-      // Insert default_menu_items (from cardapio)
-      for (const item of baseData.cardapio) {
-        const cleanedMealName = stripMealPrefix(item.meal);
-        const mealId = mealNameToId[cleanedMealName];
-        const newFoodId = oldFoodIdToNewId[item.food_id];
-
-        if (!mealId) {
-          throw new Error(`No meal found for: ${cleanedMealName}`);
-        }
-
-        if (!newFoodId) {
-          warnings.unmappedFoodIds.add(item.food_id);
-          continue;
-        }
-
-        await client.query(
-          'INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity) VALUES ($1, $2, $3, $4)',
-          [userId, mealId, newFoodId, item.qty],
-        );
-        counts.default_menu_items++;
+      // Batch insert default_menu_items
+      const defaultMenuItemBatches: LogEntry[][] = [];
+      for (let i = 0; i < baseData.cardapio.length; i += BATCH_SIZE) {
+        defaultMenuItemBatches.push(baseData.cardapio.slice(i, i + BATCH_SIZE));
       }
 
-      // Insert log_entries
-      for (const entry of logData.entries) {
-        const cleanedMealName = stripMealPrefix(entry.meal);
-        const mealId = mealNameToId[cleanedMealName];
-        const newFoodId = oldFoodIdToNewId[entry.food_id] || null;
+      for (const batch of defaultMenuItemBatches) {
+        const valuesClauses: string[] = [];
+        const params: unknown[] = [];
 
-        if (!mealId) {
-          throw new Error(`No meal found for: ${cleanedMealName}`);
+        for (let idx = 0; idx < batch.length; idx++) {
+          const item = batch[idx];
+          const cleanedMealName = stripMealPrefix(item.meal);
+          const mealId = mealNameToId[cleanedMealName];
+
+          if (!mealId) {
+            throw new Error(`No meal found for: ${cleanedMealName}`);
+          }
+
+          const paramOffset = idx * 4 + 1;
+          valuesClauses.push(`($${paramOffset}, $${paramOffset + 1}, (SELECT id FROM foods WHERE name = $${paramOffset + 2}), $${paramOffset + 3})`);
+
+          params.push(userId, mealId, item.food_name, item.qty);
         }
 
-        if (!newFoodId) {
-          warnings.unmappedFoodIds.add(entry.food_id);
-        }
+        const query = `INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity)
+          VALUES ${valuesClauses.join(', ')}`;
 
-        // Extract log_date from entry if available, otherwise use today
-        const logDate =
-          (entry as unknown as Record<string, unknown>).log_date ||
-          new Date().toISOString().split('T')[0];
+        const result = await client.query(query, params);
+        counts.default_menu_items += result.rowCount || 0;
+      }
 
-        await client.query(
-          `INSERT INTO log_entries (
-            user_id,
-            log_date,
-            meal_id,
-            food_id,
-            food_name,
-            quantity,
-            unit,
-            kcal,
-            protein_g,
-            fat_g,
-            sat_fat_g,
-            carbs_g,
-            sugars_g,
-            fibre_g,
-            salt_g,
-            created_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
-          [
+      // Batch insert log_entries with subqueries to find food_id by name
+      const logEntryBatches: LogEntry[][] = [];
+      for (let i = 0; i < logData.entries.length; i += BATCH_SIZE) {
+        logEntryBatches.push(logData.entries.slice(i, i + BATCH_SIZE));
+      }
+
+      for (const batch of logEntryBatches) {
+        const valuesClauses: string[] = [];
+        const params: unknown[] = [];
+
+        for (let idx = 0; idx < batch.length; idx++) {
+          const entry = batch[idx];
+          const cleanedMealName = stripMealPrefix(entry.meal);
+          const mealId = mealNameToId[cleanedMealName];
+
+          if (!mealId) {
+            throw new Error(`No meal found for: ${cleanedMealName}`);
+          }
+
+          // Track unmapped food_ids
+          if (!baseData.foods.some((f) => f.food_name === entry.food_name)) {
+            warnings.unmappedFoodIds.add(entry.food_id);
+          }
+
+          const logDate =
+            (entry as unknown as Record<string, unknown>).log_date ||
+            new Date().toISOString().split('T')[0];
+
+          const paramOffset = idx * 15 + 1;
+          valuesClauses.push(
+            `($${paramOffset}, $${paramOffset + 1}, $${paramOffset + 2}, (SELECT id FROM foods WHERE name = $${paramOffset + 3}), ` +
+              `$${paramOffset + 4}, $${paramOffset + 5}, $${paramOffset + 6}, $${paramOffset + 7}, $${paramOffset + 8}, ` +
+              `$${paramOffset + 9}, $${paramOffset + 10}, $${paramOffset + 11}, $${paramOffset + 12}, $${paramOffset + 13}, $${paramOffset + 14}, NOW())`,
+          );
+
+          params.push(
             userId,
             logDate,
             mealId,
-            newFoodId,
             entry.food_name,
             entry.qty,
             entry.unit,
@@ -337,9 +342,16 @@ export default async function handler(
             entry.sugars_g,
             entry.fibre_g,
             entry.salt_g,
-          ],
-        );
-        counts.log_entries++;
+          );
+        }
+
+        const query = `INSERT INTO log_entries (
+          user_id, log_date, meal_id, food_id, food_name, quantity, unit,
+          kcal, protein_g, fat_g, sat_fat_g, carbs_g, sugars_g, fibre_g, salt_g, created_at
+        ) VALUES ${valuesClauses.join(', ')}`;
+
+        const result = await client.query(query, params);
+        counts.log_entries += result.rowCount || 0;
       }
 
       // Commit transaction
