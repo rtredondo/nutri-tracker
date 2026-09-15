@@ -34,6 +34,14 @@ interface LogEntry {
   salt_g: number | null;
 }
 
+interface CardapioItem {
+  meal: string;
+  food_id: string;
+  food_name: string;
+  qty: number;
+  unit: string;
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   Drink: 'slate',
   Fruit: 'pink',
@@ -130,7 +138,7 @@ export default async function handler(
     )) as {
       ok: boolean;
       foods: Food[];
-      cardapio: LogEntry[];
+      cardapio: CardapioItem[];
     };
 
     if (!baseData.ok || !baseData.foods) {
@@ -208,7 +216,11 @@ export default async function handler(
         throw new Error('Failed to create user');
       }
 
-      // Batch insert foods
+      // Build old→new food_id mapping via batched inserts with RETURNING
+      // PostgreSQL preserves input order in multi-row INSERT ... VALUES ... RETURNING,
+      // so we can rely on RETURNING results corresponding to input rows in order
+      const oldFoodIdToNewId: Record<string, number> = {};
+
       for (let i = 0; i < baseData.foods.length; i += BATCH_SIZE) {
         const batch = baseData.foods.slice(i, i + BATCH_SIZE);
         const valuesClauses: string[] = [];
@@ -247,9 +259,17 @@ export default async function handler(
         const query = `INSERT INTO foods (
           name, food_type_id, basis_qty, basis_unit, source, kcal, protein_g,
           fat_g, sat_fat_g, carbs_g, sugars_g, fibre_g, salt_g
-        ) VALUES ${valuesClauses.join(', ')}`;
+        ) VALUES ${valuesClauses.join(', ')} RETURNING id`;
 
         const result = await client.query(query, params);
+
+        // Build mapping: RETURNING rows are in same order as input batch
+        if (result.rows.length === batch.length) {
+          for (let idx = 0; idx < batch.length; idx++) {
+            oldFoodIdToNewId[batch[idx].food_id] = result.rows[idx].id;
+          }
+        }
+
         counts.foods += result.rowCount || 0;
       }
 
@@ -260,13 +280,9 @@ export default async function handler(
         mealNameToId[meal.name] = meal.id;
       }
 
-      // Batch insert default_menu_items
-      const defaultMenuItemBatches: LogEntry[][] = [];
+      // Batch insert default_menu_items using oldFoodIdToNewId mapping
       for (let i = 0; i < baseData.cardapio.length; i += BATCH_SIZE) {
-        defaultMenuItemBatches.push(baseData.cardapio.slice(i, i + BATCH_SIZE));
-      }
-
-      for (const batch of defaultMenuItemBatches) {
+        const batch = baseData.cardapio.slice(i, i + BATCH_SIZE);
         const valuesClauses: string[] = [];
         const params: unknown[] = [];
 
@@ -274,31 +290,35 @@ export default async function handler(
           const item = batch[idx];
           const cleanedMealName = stripMealPrefix(item.meal);
           const mealId = mealNameToId[cleanedMealName];
+          const newFoodId = oldFoodIdToNewId[item.food_id];
 
           if (!mealId) {
             throw new Error(`No meal found for: ${cleanedMealName}`);
           }
 
-          const paramOffset = idx * 4 + 1;
-          valuesClauses.push(`($${paramOffset}, $${paramOffset + 1}, (SELECT id FROM foods WHERE name = $${paramOffset + 2}), $${paramOffset + 3})`);
+          if (!newFoodId) {
+            warnings.unmappedFoodIds.add(item.food_id);
+            continue;
+          }
 
-          params.push(userId, mealId, item.food_name, item.qty);
+          const paramOffset = idx * 4 + 1;
+          valuesClauses.push(`($${paramOffset}, $${paramOffset + 1}, $${paramOffset + 2}, $${paramOffset + 3})`);
+
+          params.push(userId, mealId, newFoodId, item.qty);
         }
 
-        const query = `INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity)
-          VALUES ${valuesClauses.join(', ')}`;
+        if (valuesClauses.length > 0) {
+          const query = `INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity)
+            VALUES ${valuesClauses.join(', ')}`;
 
-        const result = await client.query(query, params);
-        counts.default_menu_items += result.rowCount || 0;
+          const result = await client.query(query, params);
+          counts.default_menu_items += result.rowCount || 0;
+        }
       }
 
-      // Batch insert log_entries with subqueries to find food_id by name
-      const logEntryBatches: LogEntry[][] = [];
+      // Batch insert log_entries using oldFoodIdToNewId mapping
       for (let i = 0; i < logData.entries.length; i += BATCH_SIZE) {
-        logEntryBatches.push(logData.entries.slice(i, i + BATCH_SIZE));
-      }
-
-      for (const batch of logEntryBatches) {
+        const batch = logData.entries.slice(i, i + BATCH_SIZE);
         const valuesClauses: string[] = [];
         const params: unknown[] = [];
 
@@ -306,13 +326,14 @@ export default async function handler(
           const entry = batch[idx];
           const cleanedMealName = stripMealPrefix(entry.meal);
           const mealId = mealNameToId[cleanedMealName];
+          const newFoodId = oldFoodIdToNewId[entry.food_id] || null;
 
           if (!mealId) {
             throw new Error(`No meal found for: ${cleanedMealName}`);
           }
 
-          // Track unmapped food_ids
-          if (!baseData.foods.some((f) => f.food_name === entry.food_name)) {
+          // Track unmapped food_ids: if oldFoodIdToNewId lookup fails, it's unmapped
+          if (!newFoodId) {
             warnings.unmappedFoodIds.add(entry.food_id);
           }
 
@@ -322,7 +343,7 @@ export default async function handler(
 
           const paramOffset = idx * 15 + 1;
           valuesClauses.push(
-            `($${paramOffset}, $${paramOffset + 1}, $${paramOffset + 2}, (SELECT id FROM foods WHERE name = $${paramOffset + 3}), ` +
+            `($${paramOffset}, $${paramOffset + 1}, $${paramOffset + 2}, $${paramOffset + 3}, ` +
               `$${paramOffset + 4}, $${paramOffset + 5}, $${paramOffset + 6}, $${paramOffset + 7}, $${paramOffset + 8}, ` +
               `$${paramOffset + 9}, $${paramOffset + 10}, $${paramOffset + 11}, $${paramOffset + 12}, $${paramOffset + 13}, $${paramOffset + 14}, NOW())`,
           );
@@ -331,6 +352,7 @@ export default async function handler(
             userId,
             logDate,
             mealId,
+            newFoodId,
             entry.food_name,
             entry.qty,
             entry.unit,
