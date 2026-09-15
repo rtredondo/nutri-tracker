@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
+import { Client } from '@neondatabase/serverless';
 
 interface Food {
   food_id: string;
@@ -104,12 +104,14 @@ export default async function handler(
     return;
   }
 
+  const client = new Client({ connectionString: databaseUrl });
+
   try {
-    const sql = neon(databaseUrl);
+    await client.connect();
 
     // Idempotency guard: check if migration already ran
-    const existingEntries = await sql`SELECT COUNT(*) as count FROM log_entries`;
-    if (existingEntries.length > 0 && existingEntries[0].count > 0) {
+    const existingEntries = await client.query('SELECT COUNT(*) as count FROM log_entries');
+    if (existingEntries.rows.length > 0 && parseInt(existingEntries.rows[0].count) > 0) {
       res.status(200).json({
         ok: true,
         message: 'Migration already completed',
@@ -118,21 +120,7 @@ export default async function handler(
       return;
     }
 
-    // Start transaction
-    const counts = {
-      food_types: 0,
-      meals: 0,
-      users: 0,
-      foods: 0,
-      default_menu_items: 0,
-      log_entries: 0,
-    };
-
-    const warnings = {
-      unmappedFoodIds: new Set<string>(),
-    };
-
-    // Fetch data from Apps Script
+    // Fetch data from Apps Script before starting transaction
     const baseData = (await fetchAppsScriptData(
       'base',
       appsScriptUrl,
@@ -163,98 +151,117 @@ export default async function handler(
       throw new Error('Failed to fetch log data from Apps Script');
     }
 
+    const counts = {
+      food_types: 0,
+      meals: 0,
+      users: 0,
+      foods: 0,
+      default_menu_items: 0,
+      log_entries: 0,
+    };
+
+    const warnings = {
+      unmappedFoodIds: new Set<string>(),
+    };
+
     // Build category→food_type_id mapping
     const uniqueCategories = [...new Set(baseData.foods.map((f) => f.category))];
     const categoryToFoodTypeId: Record<string, number> = {};
 
-    // Insert food_types and build mapping
-    for (const category of uniqueCategories) {
-      const color = CATEGORY_COLORS[category] || 'gray';
-      const result = await sql`
-        INSERT INTO food_types (name, color)
-        VALUES (${category}, ${color})
-        RETURNING id
-      `;
-      if (result.length > 0) {
-        categoryToFoodTypeId[category] = result[0].id;
-        counts.food_types++;
-      }
-    }
+    // Start transaction
+    await client.query('BEGIN');
 
-    // Insert meals
-    for (const meal of MEALS) {
-      await sql`
-        INSERT INTO meals (name, sort_order)
-        VALUES (${meal.name}, ${meal.sort_order})
-      `;
-      counts.meals++;
-    }
-
-    // Insert user "RR"
-    const userResult = await sql`
-      INSERT INTO users (name, created_at)
-      VALUES ('RR', NOW())
-      RETURNING id
-    `;
-    const userId = userResult.length > 0 ? userResult[0].id : null;
-    if (userId) counts.users++;
-
-    // Build old→new food_id mapping and insert foods
-    const oldFoodIdToNewId: Record<string, number> = {};
-    for (const food of baseData.foods) {
-      const foodTypeId = categoryToFoodTypeId[food.category];
-      if (!foodTypeId) {
-        throw new Error(`No food_type_id found for category: ${food.category}`);
+    try {
+      // Insert food_types
+      for (const category of uniqueCategories) {
+        const color = CATEGORY_COLORS[category] || 'gray';
+        const result = await client.query(
+          'INSERT INTO food_types (name, color) VALUES ($1, $2) RETURNING id',
+          [category, color],
+        );
+        if (result.rows.length > 0) {
+          categoryToFoodTypeId[category] = result.rows[0].id;
+          counts.food_types++;
+        }
       }
 
-      const result = await sql`
-        INSERT INTO foods (
-          name,
-          food_type_id,
-          basis_qty,
-          basis_unit,
-          source,
-          kcal,
-          protein_g,
-          fat_g,
-          sat_fat_g,
-          carbs_g,
-          sugars_g,
-          fibre_g,
-          salt_g
-        ) VALUES (
-          ${food.food_name},
-          ${foodTypeId},
-          ${food.basis_qty},
-          ${food.basis_unit},
-          ${food.source},
-          ${food.kcal},
-          ${food.protein_g},
-          ${food.fat_g},
-          ${food.sat_fat_g},
-          ${food.carbs_g},
-          ${food.sugars_g},
-          ${food.fibre_g},
-          ${food.salt_g}
-        )
-        RETURNING id
-      `;
-
-      if (result.length > 0) {
-        oldFoodIdToNewId[food.food_id] = result[0].id;
-        counts.foods++;
+      // Insert meals
+      for (const meal of MEALS) {
+        await client.query('INSERT INTO meals (name, sort_order) VALUES ($1, $2)', [
+          meal.name,
+          meal.sort_order,
+        ]);
+        counts.meals++;
       }
-    }
 
-    // Build meal name→meal_id mapping
-    const mealNameToId: Record<string, number> = {};
-    const meals = await sql`SELECT id, name FROM meals ORDER BY sort_order`;
-    for (const meal of meals) {
-      mealNameToId[meal.name] = meal.id;
-    }
+      // Insert user "RR"
+      const userResult = await client.query(
+        'INSERT INTO users (name, created_at) VALUES ($1, NOW()) RETURNING id',
+        ['RR'],
+      );
+      const userId = userResult.rows.length > 0 ? userResult.rows[0].id : null;
+      if (userId) counts.users++;
 
-    // Insert default_menu_items (from cardapio)
-    if (userId) {
+      if (!userId) {
+        throw new Error('Failed to create user');
+      }
+
+      // Build old→new food_id mapping and insert foods
+      const oldFoodIdToNewId: Record<string, number> = {};
+      for (const food of baseData.foods) {
+        const foodTypeId = categoryToFoodTypeId[food.category];
+        if (!foodTypeId) {
+          throw new Error(`No food_type_id found for category: ${food.category}`);
+        }
+
+        const result = await client.query(
+          `INSERT INTO foods (
+            name,
+            food_type_id,
+            basis_qty,
+            basis_unit,
+            source,
+            kcal,
+            protein_g,
+            fat_g,
+            sat_fat_g,
+            carbs_g,
+            sugars_g,
+            fibre_g,
+            salt_g
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          RETURNING id`,
+          [
+            food.food_name,
+            foodTypeId,
+            food.basis_qty,
+            food.basis_unit,
+            food.source,
+            food.kcal,
+            food.protein_g,
+            food.fat_g,
+            food.sat_fat_g,
+            food.carbs_g,
+            food.sugars_g,
+            food.fibre_g,
+            food.salt_g,
+          ],
+        );
+
+        if (result.rows.length > 0) {
+          oldFoodIdToNewId[food.food_id] = result.rows[0].id;
+          counts.foods++;
+        }
+      }
+
+      // Get meal name→meal_id mapping
+      const mealsResult = await client.query('SELECT id, name FROM meals ORDER BY sort_order');
+      const mealNameToId: Record<string, number> = {};
+      for (const meal of mealsResult.rows) {
+        mealNameToId[meal.name] = meal.id;
+      }
+
+      // Insert default_menu_items (from cardapio)
       for (const item of baseData.cardapio) {
         const cleanedMealName = stripMealPrefix(item.meal);
         const mealId = mealNameToId[cleanedMealName];
@@ -269,16 +276,14 @@ export default async function handler(
           continue;
         }
 
-        await sql`
-          INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity)
-          VALUES (${userId}, ${mealId}, ${newFoodId}, ${item.qty})
-        `;
+        await client.query(
+          'INSERT INTO default_menu_items (user_id, meal_id, food_id, quantity) VALUES ($1, $2, $3, $4)',
+          [userId, mealId, newFoodId, item.qty],
+        );
         counts.default_menu_items++;
       }
-    }
 
-    // Insert log_entries
-    if (userId) {
+      // Insert log_entries
       for (const entry of logData.entries) {
         const cleanedMealName = stripMealPrefix(entry.meal);
         const mealId = mealNameToId[cleanedMealName];
@@ -293,10 +298,12 @@ export default async function handler(
         }
 
         // Extract log_date from entry if available, otherwise use today
-        const logDate = (entry as unknown as Record<string, unknown>).log_date || new Date().toISOString().split('T')[0];
+        const logDate =
+          (entry as unknown as Record<string, unknown>).log_date ||
+          new Date().toISOString().split('T')[0];
 
-        await sql`
-          INSERT INTO log_entries (
+        await client.query(
+          `INSERT INTO log_entries (
             user_id,
             log_date,
             meal_id,
@@ -313,37 +320,44 @@ export default async function handler(
             fibre_g,
             salt_g,
             created_at
-          ) VALUES (
-            ${userId},
-            ${logDate},
-            ${mealId},
-            ${newFoodId},
-            ${entry.food_name},
-            ${entry.qty},
-            ${entry.unit},
-            ${entry.kcal},
-            ${entry.protein_g},
-            ${entry.fat_g},
-            ${entry.sat_fat_g},
-            ${entry.carbs_g},
-            ${entry.sugars_g},
-            ${entry.fibre_g},
-            ${entry.salt_g},
-            NOW()
-          )
-        `;
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+          [
+            userId,
+            logDate,
+            mealId,
+            newFoodId,
+            entry.food_name,
+            entry.qty,
+            entry.unit,
+            entry.kcal,
+            entry.protein_g,
+            entry.fat_g,
+            entry.sat_fat_g,
+            entry.carbs_g,
+            entry.sugars_g,
+            entry.fibre_g,
+            entry.salt_g,
+          ],
+        );
         counts.log_entries++;
       }
-    }
 
-    res.status(200).json({
-      ok: true,
-      message: 'Migration completed successfully',
-      counts,
-      warnings: {
-        unmappedFoodIds: Array.from(warnings.unmappedFoodIds),
-      },
-    });
+      // Commit transaction
+      await client.query('COMMIT');
+
+      res.status(200).json({
+        ok: true,
+        message: 'Migration completed successfully',
+        counts,
+        warnings: {
+          unmappedFoodIds: Array.from(warnings.unmappedFoodIds),
+        },
+      });
+    } catch (error) {
+      // Rollback transaction on any error
+      await client.query('ROLLBACK');
+      throw error;
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Migration error:', errorMessage);
@@ -351,5 +365,8 @@ export default async function handler(
       ok: false,
       error: errorMessage,
     });
+  } finally {
+    // Always release the client connection
+    await client.end();
   }
 }
