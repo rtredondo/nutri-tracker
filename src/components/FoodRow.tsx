@@ -102,7 +102,7 @@ export default function FoodRow({ entry, food, onQuantityChange, onRemove, onSwa
                 value={entry.qty}
                 onChange={(e) => onQuantityChange(parseFloat(e.target.value) || 0)}
                 inputMode="decimal"
-                className="w-16 sm:w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
+                className="w-16 sm:w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-base"
                 aria-label="Quantity"
               />
               <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
