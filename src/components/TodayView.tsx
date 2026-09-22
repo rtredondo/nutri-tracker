@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Food, LogEntry } from '../lib/nutrients';
-import { sumNutrients, coerceBasisQty } from '../lib/nutrients';
+import { sumNutrients, coerceBasisQty, computeNutrient } from '../lib/nutrients';
 import { fetchLogs, saveDay } from '../lib/api';
 import { getCachedDayEdits, cacheDayEdits, clearDayEdits, getSettings, getMealCollapseState, saveMealCollapseState } from '../lib/storage';
 import { getToday, addDays } from '../lib/dates';
@@ -100,21 +100,24 @@ export default function TodayView({ foods, cardapio }: TodayViewProps) {
     setSaveError(null);
   };
 
-  const createLogEntry = (food: Food, meal: string, qty?: number): LogEntry => ({
-    meal,
-    food_id: food.food_id,
-    food_name: food.food_name,
-    qty: qty ?? coerceBasisQty(food),
-    unit: food.basis_unit,
-    kcal: food.kcal,
-    protein_g: food.protein_g,
-    fat_g: food.fat_g,
-    sat_fat_g: food.sat_fat_g,
-    carbs_g: food.carbs_g,
-    sugars_g: food.sugars_g,
-    fibre_g: food.fibre_g,
-    salt_g: food.salt_g,
-  });
+  const createLogEntry = (food: Food, meal: string, qty?: number): LogEntry => {
+    const finalQty = qty ?? coerceBasisQty(food);
+    return {
+      meal,
+      food_id: food.food_id,
+      food_name: food.food_name,
+      qty: finalQty,
+      unit: food.basis_unit,
+      kcal: computeNutrient(food, 'kcal', finalQty),
+      protein_g: computeNutrient(food, 'protein_g', finalQty),
+      fat_g: computeNutrient(food, 'fat_g', finalQty),
+      sat_fat_g: computeNutrient(food, 'sat_fat_g', finalQty),
+      carbs_g: computeNutrient(food, 'carbs_g', finalQty),
+      sugars_g: computeNutrient(food, 'sugars_g', finalQty),
+      fibre_g: computeNutrient(food, 'fibre_g', finalQty),
+      salt_g: computeNutrient(food, 'salt_g', finalQty),
+    };
+  };
 
   const handleAddFood = (selectedFood: Food, meal: string) => {
     const newEntry = createLogEntry(selectedFood, meal);
